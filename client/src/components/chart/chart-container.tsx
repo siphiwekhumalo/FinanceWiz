@@ -86,7 +86,7 @@ export function ChartContainer() {
     const rect = canvas.getBoundingClientRect();
     const { width, height } = canvas;
     const leftPadding = 0;
-    const rightPadding = 50;
+    const rightPadding = 35;
     const topPadding = 0;
     const bottomPadding = 25;
     const chartWidth = width - leftPadding - rightPadding;
@@ -116,7 +116,7 @@ export function ChartContainer() {
 
     const { width, height } = canvas;
     const leftPadding = 0;
-    const rightPadding = 50;
+    const rightPadding = 35;
     const topPadding = 0;
     const bottomPadding = 25;
     const chartWidth = width - leftPadding - rightPadding;
@@ -797,7 +797,7 @@ export function ChartContainer() {
     const width = rect.width;
     const height = rect.height;
     const leftPadding = 0; // Start from left edge
-    const rightPadding = 50; // Minimal space for price labels
+    const rightPadding = 35; // Minimal space for price labels
     const topPadding = 0; // Start from top edge
     const bottomPadding = 25; // Minimal space for time labels
     const chartWidth = width - leftPadding - rightPadding;
