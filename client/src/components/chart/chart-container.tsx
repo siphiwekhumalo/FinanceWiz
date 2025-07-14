@@ -666,34 +666,22 @@ export function ChartContainer() {
           }
         });
       } else {
-        // Absolute mode: normalize comparison symbol to fit within chart bounds
-        // This ensures comparison symbols are always visible and properly positioned
-        const compPrices = alignedVisibleData.map(d => d.close);
-        const compMinPrice = Math.min(...compPrices);
-        const compMaxPrice = Math.max(...compPrices);
-        const compPriceRange = compMaxPrice - compMinPrice;
-        
-        if (compPriceRange === 0) {
-          // If no price variation, draw a flat line in the middle
-          const y = padding + chartHeight / 2;
-          ctx.moveTo(padding, y);
-          ctx.lineTo(padding + chartWidth, y);
-        } else {
-          alignedVisibleData.forEach((point, index) => {
-            // Use main chart's visible data length for consistent X positioning
-            const x = padding + (index * chartWidth) / Math.max(1, visibleData.length - 1);
-            
-            // Normalize comparison price to 0-1 range, then map to chart height
-            const normalizedPrice = (point.close - compMinPrice) / compPriceRange;
-            const y = padding + (1 - normalizedPrice) * chartHeight;
-            
-            if (index === 0) {
-              ctx.moveTo(x, y);
-            } else {
-              ctx.lineTo(x, y);
-            }
-          });
-        }
+        // Absolute mode: overlay comparison symbols on main chart's price scale
+        // This is how professional trading platforms display comparison symbols
+        alignedVisibleData.forEach((point, index) => {
+          // Use main chart's visible data length for consistent X positioning
+          const x = padding + (index * chartWidth) / Math.max(1, visibleData.length - 1);
+          
+          // Map comparison symbol price directly to main chart's price axis
+          // This allows true price comparison with the main symbol
+          const y = padding + ((maxPrice - point.close) / priceRange) * chartHeight;
+          
+          if (index === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        });
       }
 
       // Apply different stroke styles based on comparison symbol style
@@ -724,20 +712,9 @@ export function ChartContainer() {
             x = padding + (index * chartWidth) / Math.max(1, visibleData.length - 1);
             y = padding + chartHeight - (normalizedY * chartHeight);
           } else {
-            // Absolute mode: use normalized positioning for comparison symbols
-            const compPrices = alignedVisibleData.map(d => d.close);
-            const compMinPrice = Math.min(...compPrices);
-            const compMaxPrice = Math.max(...compPrices);
-            const compPriceRange = compMaxPrice - compMinPrice;
-            
+            // Absolute mode: use main chart's price scale for comparison symbols
             x = padding + (index * chartWidth) / Math.max(1, visibleData.length - 1);
-            
-            if (compPriceRange === 0) {
-              y = padding + chartHeight / 2;
-            } else {
-              const normalizedPrice = (point.close - compMinPrice) / compPriceRange;
-              y = padding + (1 - normalizedPrice) * chartHeight;
-            }
+            y = padding + ((maxPrice - point.close) / priceRange) * chartHeight;
           }
           
           if (index === 0) {
