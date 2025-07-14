@@ -210,8 +210,8 @@ export function ChartContainer() {
     const chartCoords = canvasToChartCoords(x, y, chartDataRef.current);
     if (!chartCoords) return;
 
-    // Always prevent default behavior when in drawing mode
-    if (isInDrawMode || config.selectedTool !== 'cursor') {
+    // Only prevent default behavior when using drawing tools, not cursor
+    if (config.selectedTool !== 'cursor') {
       e.preventDefault();
       e.stopPropagation();
     }
@@ -290,8 +290,8 @@ export function ChartContainer() {
     const chartCoords = canvasToChartCoords(x, y, chartDataRef.current);
     if (!chartCoords) return;
 
-    // Prevent any default behavior when in drawing mode (not cursor mode)
-    if (isInDrawMode && config.selectedTool !== 'cursor') {
+    // Only prevent default behavior when drawing (not in cursor mode)
+    if (config.selectedTool !== 'cursor') {
       e.preventDefault();
       e.stopPropagation();
     }
@@ -1108,12 +1108,7 @@ export function ChartContainer() {
 
     // Enhanced mouse event handlers for smooth scrolling and zooming
     const handleWheel = (e: WheelEvent) => {
-      // Don't handle wheel events when in drawing mode
-      if (isInDrawMode || config.selectedTool !== 'cursor') {
-        e.preventDefault();
-        return;
-      }
-      
+      // Always allow wheel events for chart navigation
       e.preventDefault();
       const data = chartDataRef.current;
       if (data.length === 0) return;
@@ -1137,8 +1132,8 @@ export function ChartContainer() {
     };
 
     const handleMouseDown = (e: MouseEvent) => {
-      // Don't start dragging if we're in drawing mode or using drawing tools
-      if (isInDrawMode || config.selectedTool !== 'cursor') {
+      // Only start dragging for chart navigation in cursor mode
+      if (config.selectedTool !== 'cursor') {
         return;
       }
       
@@ -1383,14 +1378,7 @@ export function ChartContainer() {
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
-          onWheel={(e) => {
-            // Prevent scrolling when drawing or editing
-            if (isDrawing || isDraggingEndpoint || config.selectedTool !== 'cursor') {
-              e.preventDefault();
-              return;
-            }
-            // Allow normal scrolling for cursor tool
-          }}
+
           onContextMenu={handleContextMenu}
         />
         
