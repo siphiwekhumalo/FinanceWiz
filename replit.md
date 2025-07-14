@@ -142,3 +142,7 @@ Preferred communication style: Simple, everyday language.
 - **Fixed comparison symbol positioning to use normalized percentage changes from baseline**
 - **Added dynamic Y-axis that switches to percentage format when comparison symbols are active**
 - **Resolved cursor movement interference with comparison symbol stability**
+- **Fixed comparison symbol visibility with combined price range approach (July 2025)**
+- **Improved toolbar layout by moving zoom controls to bottom-center of chart**
+- **Set volume indicator to disabled by default, removed dummy DataSourceToggle button**
+- **Created comprehensive README.md with local development documentation**

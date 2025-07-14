@@ -1,4 +1,4 @@
-import { ZoomIn, ZoomOut, RotateCcw, Grid, Crosshair, Volume2, Maximize, Minimize } from 'lucide-react';
+import { Crosshair, Volume2, Maximize, Minimize } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChartStore } from '@/store/chart-store';
 import { useSettingsStore } from '@/store/settings-store';
@@ -37,46 +37,11 @@ export function ChartToolbar() {
         <div className="w-px h-4 bg-slate-600" />
         
         <ComparisonDropdown />
-        
-        <div className="w-px h-4 bg-slate-600" />
-        
-        <DataSourceToggle />
       </div>
 
       {/* Right side - Chart controls */}
       <div className="flex items-center space-x-1">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={zoomIn}
-          className="px-2 py-1 h-8"
-          title="Zoom In (Ctrl/Cmd + Wheel Up)"
-        >
-          <ZoomIn className="h-4 w-4" />
-        </Button>
-        
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={zoomOut}
-          className="px-2 py-1 h-8"
-          title="Zoom Out (Ctrl/Cmd + Wheel Down)"
-        >
-          <ZoomOut className="h-4 w-4" />
-        </Button>
-        
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={resetZoom}
-          className="px-2 py-1 h-8"
-          title="Reset Zoom"
-        >
-          <RotateCcw className="h-4 w-4" />
-        </Button>
 
-        <div className="w-px h-4 bg-slate-600 mx-1" />
-        
         <Button
           variant={config.showVolume ? "default" : "ghost"}
           size="sm"

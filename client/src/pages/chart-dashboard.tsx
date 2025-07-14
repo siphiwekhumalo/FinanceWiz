@@ -4,6 +4,7 @@ import { useSettingsStore } from '@/store/settings-store';
 import { AppHeader } from '@/components/header/app-header';
 import { ChartContainer } from '@/components/chart/chart-container';
 import { ChartToolbar } from '@/components/chart/chart-toolbar';
+import { ChartZoomControls } from '@/components/chart/chart-zoom-controls';
 import { VolumeChart } from '@/components/chart/volume-chart';
 import { RightPanel } from '@/components/right-panel/right-panel';
 import { SettingsModal } from '@/components/modals/settings-modal';
@@ -30,6 +31,7 @@ export default function ChartDashboard() {
         
         <div className="flex-1 bg-slate-900 relative">
           <ChartContainer />
+          <ChartZoomControls />
         </div>
         
         {config.showVolume && (
@@ -52,6 +54,7 @@ export default function ChartDashboard() {
           
           <div className="flex-1 bg-slate-900 relative">
             <ChartContainer />
+            <ChartZoomControls />
           </div>
           
           {config.showVolume && (

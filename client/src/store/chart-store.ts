@@ -60,7 +60,7 @@ const defaultConfig: ChartConfig = {
   dataSource: 'dummy',
   selectedTool: 'cursor',
   indicators: [],
-  showVolume: true,
+  showVolume: false,
   showCrosshair: true,
   drawingObjects: [],
   comparisonSymbols: [],
