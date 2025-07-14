@@ -832,9 +832,12 @@ export function ChartContainer() {
     // Ensure scroll offset stays within bounds
     scrollOffsetRef.current = Math.max(0, Math.min(scrollOffsetRef.current, maxScrollOffset));
     const currentScrollOffset = scrollOffsetRef.current;
+    
+    // Apply zoom and scroll to get the actual visible data
+    const visibleData = data.slice(currentScrollOffset, currentScrollOffset + visibleDataCount);
 
-    // Calculate combined price range including all active comparison symbols
-    let allPrices = data.flatMap(d => [d.open, d.high, d.low, d.close]);
+    // Calculate combined price range including all active comparison symbols using visible data
+    let allPrices = visibleData.flatMap(d => [d.open, d.high, d.low, d.close]);
     
     // Add comparison symbol prices to the range calculation
     config.comparisonSymbols.forEach(compSymbol => {
@@ -846,7 +849,7 @@ export function ChartContainer() {
         compData = compSymbol.data.slice(currentScrollOffset, currentScrollOffset + visibleDataCount);
       } else {
         // Generate comparison data for range calculation
-        const mainTimestamps = data.slice(currentScrollOffset, currentScrollOffset + visibleDataCount).map(point => point.time);
+        const mainTimestamps = visibleData.map(point => point.time);
         const chartService = ChartService.getInstance();
         compData = chartService.dummyService.generateChartData(
           compSymbol.symbol,
@@ -866,7 +869,7 @@ export function ChartContainer() {
     const maxPrice = Math.max(...allPrices);
     const priceRange = maxPrice - minPrice;
 
-    const times = data.map(d => d.time);
+    const times = visibleData.map(d => d.time);
     const minTime = Math.min(...times);
     const maxTime = Math.max(...times);
     const timeRange = maxTime - minTime;
@@ -941,7 +944,6 @@ export function ChartContainer() {
     ctx.moveTo(leftPadding, height - bottomPadding);
     ctx.lineTo(width - rightPadding, height - bottomPadding);
     ctx.stroke();
-    const visibleData = data.slice(currentScrollOffset, currentScrollOffset + visibleDataCount);
 
     // Draw time axis labels (X-axis) - professional styling like ChartIQ
     ctx.textAlign = 'center';
@@ -1115,6 +1117,9 @@ export function ChartContainer() {
       ctx.stroke();
     }
 
+    // Draw comparison symbols (before crosshair to avoid interference)
+    drawComparisonSymbols(ctx, data, minPrice, maxPrice, priceRange, visibleData);
+
     // Draw volume chart if enabled
     if (config.showVolume) {
       const volumeHeight = chartHeight * 0.2;
@@ -1133,9 +1138,6 @@ export function ChartContainer() {
 
     // Draw drawing objects
     drawDrawingObjects(ctx, data);
-
-    // Draw comparison symbols (before crosshair to avoid interference)
-    drawComparisonSymbols(ctx, data, minPrice, maxPrice, priceRange, visibleData);
 
     // Draw crosshair
     drawCrosshair(ctx, data);
