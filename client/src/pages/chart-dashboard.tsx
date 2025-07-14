@@ -29,7 +29,7 @@ export default function ChartDashboard() {
       <div className="h-screen flex flex-col bg-slate-900 text-slate-100">
         <ChartToolbar />
         
-        <div className="flex-1 bg-slate-900 relative">
+        <div className="flex-1 bg-slate-900 relative border-b border-slate-700">
           <ChartContainer />
           <ChartZoomControls />
         </div>
@@ -52,7 +52,7 @@ export default function ChartDashboard() {
         <main className="flex-1 flex flex-col">
           <ChartToolbar />
           
-          <div className="flex-1 bg-slate-900 relative">
+          <div className="flex-1 bg-slate-900 relative border-b border-slate-700">
             <ChartContainer />
             <ChartZoomControls />
           </div>
