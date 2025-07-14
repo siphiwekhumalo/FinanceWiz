@@ -653,33 +653,21 @@ export function ChartContainer() {
           }
         });
       } else {
-        // Absolute mode: normalize comparison data to fit within main chart's price range
-        const compPrices = compVisibleData.map(d => d.close);
-        const compMinPrice = Math.min(...compPrices);
-        const compMaxPrice = Math.max(...compPrices);
-        const compPriceRange = compMaxPrice - compMinPrice;
-        
-        if (compPriceRange === 0) {
-          // If comparison data has no price range, draw a flat line at the middle
-          const y = padding + chartHeight / 2;
-          ctx.moveTo(padding, y);
-          ctx.lineTo(padding + chartWidth, y);
-        } else {
-          compVisibleData.forEach((point, index) => {
-            const x = padding + (index * chartWidth) / Math.max(1, compVisibleData.length - 1);
-            
-            // Scale comparison symbol to fit the main chart's price range more naturally
-            // Use the same Y coordinate system as the main chart
-            const compNormalizedPrice = (point.close - compMinPrice) / compPriceRange;
-            const y = padding + (1 - compNormalizedPrice) * chartHeight;
-            
-            if (index === 0) {
-              ctx.moveTo(x, y);
-            } else {
-              ctx.lineTo(x, y);
-            }
-          });
-        }
+        // Absolute mode: plot comparison symbols on the same price scale as main chart
+        // This is how professional trading platforms display comparison symbols
+        compVisibleData.forEach((point, index) => {
+          const x = padding + (index * chartWidth) / Math.max(1, compVisibleData.length - 1);
+          
+          // Map comparison symbol price directly to main chart's price axis
+          // This allows comparison symbols to show actual price relationships
+          const y = padding + ((maxPrice - point.close) / priceRange) * chartHeight;
+          
+          if (index === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        });
       }
 
       // Apply different stroke styles based on comparison symbol style
@@ -709,19 +697,9 @@ export function ChartContainer() {
             x = padding + (index * chartWidth) / Math.max(1, compVisibleData.length - 1);
             y = padding + chartHeight - (normalizedY * chartHeight);
           } else {
-            const compPrices = compVisibleData.map(d => d.close);
-            const compMinPrice = Math.min(...compPrices);
-            const compMaxPrice = Math.max(...compPrices);
-            const compPriceRange = compMaxPrice - compMinPrice;
-            
-            if (compPriceRange === 0) {
-              y = padding + chartHeight / 2;
-            } else {
-              const compNormalizedPrice = (point.close - compMinPrice) / compPriceRange;
-              y = padding + (1 - compNormalizedPrice) * chartHeight;
-            }
-            
+            // Absolute mode: use main chart's price scale for comparison symbols
             x = padding + (index * chartWidth) / Math.max(1, compVisibleData.length - 1);
+            y = padding + ((maxPrice - point.close) / priceRange) * chartHeight;
           }
           
           if (index === 0) {
