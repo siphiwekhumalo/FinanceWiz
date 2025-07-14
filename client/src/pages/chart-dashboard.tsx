@@ -49,7 +49,7 @@ export default function ChartDashboard() {
       <AppHeader />
       
       <div className="flex flex-1 overflow-hidden">
-        <main className="flex-1 flex flex-col">
+        <main className="flex-1 flex flex-col mr-72">
           <ChartToolbar />
           
           <div className="flex-1 bg-slate-900 relative border-b border-slate-700">
