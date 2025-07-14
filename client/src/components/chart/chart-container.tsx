@@ -33,6 +33,7 @@ export function ChartContainer() {
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
   const [previewPoint, setPreviewPoint] = useState<{ x: number; y: number; price: number; time: number } | null>(null);
   const [isInDrawMode, setIsInDrawMode] = useState(false);
+  const [crosshairPosition, setCrosshairPosition] = useState<{ x: number; y: number; price: number; time: number } | null>(null);
   const chartService = ChartService.getInstance();
 
   const getCurrentTime = () => {
@@ -325,6 +326,11 @@ export function ChartContainer() {
       setPreviewPoint(chartCoords);
     }
 
+    // Update crosshair position when enabled
+    if (config.showCrosshair && !isDrawing && !isDraggingEndpoint) {
+      setCrosshairPosition(chartCoords);
+    }
+
     // Handle hover effects and cursor changes
     if (config.selectedTool === 'cursor') {
       const endpoint = getEndpointAtPosition(x, y);
@@ -515,6 +521,73 @@ export function ChartContainer() {
       }
     }
   }, [config.drawingObjects, currentDrawingObject, selectedObjectId, hoveredObjectId, previewPoint, isInDrawMode, isDrawing, config.selectedTool, chartToCanvasCoords]);
+
+  // Draw crosshair lines
+  const drawCrosshair = useCallback((ctx: CanvasRenderingContext2D, data: ChartDataPoint[]) => {
+    if (!config.showCrosshair || !crosshairPosition) return;
+
+    const canvas = ctx.canvas;
+    const { width, height } = canvas;
+    const padding = 40;
+    const chartWidth = width - padding * 2;
+    const chartHeight = height - padding * 2;
+
+    const canvasPoint = chartToCanvasCoords(crosshairPosition.price, crosshairPosition.time, data);
+    if (!canvasPoint) return;
+
+    ctx.save();
+    ctx.strokeStyle = '#64748b';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.globalAlpha = 0.7;
+
+    // Draw vertical line
+    ctx.beginPath();
+    ctx.moveTo(canvasPoint.x, padding);
+    ctx.lineTo(canvasPoint.x, height - padding);
+    ctx.stroke();
+
+    // Draw horizontal line
+    ctx.beginPath();
+    ctx.moveTo(padding, canvasPoint.y);
+    ctx.lineTo(width - padding, canvasPoint.y);
+    ctx.stroke();
+
+    // Draw price and time labels
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#1e293b';
+    ctx.strokeStyle = '#64748b';
+    ctx.lineWidth = 1;
+
+    // Price label on Y-axis
+    const priceText = crosshairPosition.price.toFixed(2);
+    ctx.font = '12px monospace';
+    const priceTextWidth = ctx.measureText(priceText).width;
+    const priceLabelX = width - padding + 2;
+    const priceLabelY = canvasPoint.y;
+    
+    ctx.fillRect(priceLabelX, priceLabelY - 8, priceTextWidth + 8, 16);
+    ctx.strokeRect(priceLabelX, priceLabelY - 8, priceTextWidth + 8, 16);
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillText(priceText, priceLabelX + 4, priceLabelY + 4);
+
+    // Time label on X-axis
+    const timeText = new Date(crosshairPosition.time * 1000).toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+    const timeTextWidth = ctx.measureText(timeText).width;
+    const timeLabelX = canvasPoint.x - timeTextWidth / 2 - 4;
+    const timeLabelY = height - padding + 2;
+    
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(timeLabelX, timeLabelY, timeTextWidth + 8, 16);
+    ctx.strokeRect(timeLabelX, timeLabelY, timeTextWidth + 8, 16);
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillText(timeText, timeLabelX + 4, timeLabelY + 12);
+
+    ctx.restore();
+  }, [config.showCrosshair, crosshairPosition, chartToCanvasCoords]);
 
   // Draw draggable endpoints
   const drawEndpoints = useCallback((ctx: CanvasRenderingContext2D, obj: DrawingObject, data: ChartDataPoint[], isSelected: boolean) => {
@@ -905,6 +978,9 @@ export function ChartContainer() {
     // Draw drawing objects
     drawDrawingObjects(ctx, data);
 
+    // Draw crosshair
+    drawCrosshair(ctx, data);
+
     // Draw scroll indicator
     if (data.length > visibleDataCount) {
       const scrollbarHeight = 4;
@@ -922,7 +998,7 @@ export function ChartContainer() {
       ctx.fillStyle = '#64748b';
       ctx.fillRect(thumbX, scrollbarY, thumbWidth, scrollbarHeight);
     }
-  }, [config.chartType, config.showVolume, drawDrawingObjects]);
+  }, [config.chartType, config.showVolume, drawDrawingObjects, drawCrosshair]);
 
   // Initialize canvas and load data
   useEffect(() => {
@@ -1106,10 +1182,16 @@ export function ChartContainer() {
       }
     };
 
+    // Handle mouse leave to clear crosshair
+    const handleMouseLeave = () => {
+      setCrosshairPosition(null);
+    };
+
     // Add event listeners
     canvas.addEventListener('wheel', handleWheel, { passive: false });
     canvas.addEventListener('mousedown', handleMouseDown);
     canvas.addEventListener('keydown', handleKeyDown);
+    canvas.addEventListener('mouseleave', handleMouseLeave);
     canvas.setAttribute('tabindex', '0'); // Make canvas focusable for keyboard events
 
     // Load and draw chart data
@@ -1136,6 +1218,7 @@ export function ChartContainer() {
       canvas.removeEventListener('wheel', handleWheel);
       canvas.removeEventListener('mousedown', handleMouseDown);
       canvas.removeEventListener('keydown', handleKeyDown);
+      canvas.removeEventListener('mouseleave', handleMouseLeave);
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
