@@ -31,10 +31,11 @@ export class ChartService {
     symbolId: number, 
     timeframe: string, 
     useDummy: boolean = true,
-    limit: number = 100
+    limit: number = 100,
+    symbol: string = 'AAPL'
   ): Promise<ChartDataPoint[]> {
     if (useDummy) {
-      return this.dummyService.generateChartData('AAPL', timeframe, limit);
+      return this.dummyService.generateChartData(symbol, timeframe, limit);
     }
     
     const response = await apiRequest('GET', `/api/chart-data/${symbolId}/${timeframe}?limit=${limit}`);
@@ -48,6 +49,22 @@ export class ChartService {
       close: parseFloat(point.close),
       volume: parseInt(point.volume)
     }));
+  }
+
+  // Generate comparison data aligned with main chart timestamps
+  async getAlignedComparisonData(
+    symbol: string,
+    timeframe: string,
+    baseTimestamps: number[],
+    useDummy: boolean = true
+  ): Promise<ChartDataPoint[]> {
+    if (useDummy) {
+      return this.dummyService.generateChartData(symbol, timeframe, 100, baseTimestamps);
+    }
+    
+    // For real data, we would fetch and align with base timestamps
+    // For now, return aligned dummy data
+    return this.dummyService.generateChartData(symbol, timeframe, 100, baseTimestamps);
   }
 
   async generateDummyData(symbolId: number, timeframe: string, count: number = 100): Promise<any> {

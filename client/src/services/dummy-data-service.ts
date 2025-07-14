@@ -12,14 +12,44 @@ export class DummyDataService {
     return DummyDataService.instance;
   }
 
-  generateChartData(symbol: string, timeframe: string, count: number = 100): ChartDataPoint[] {
+  generateChartData(symbol: string, timeframe: string, count: number = 100, baseTimestamps?: number[]): ChartDataPoint[] {
     const data: ChartDataPoint[] = [];
     const now = Date.now();
     const timeframeMs = this.getTimeframeMs(timeframe);
     
-    // Ensure minimum 200 data points for better chart rendering
+    // If base timestamps are provided, use them for alignment
+    if (baseTimestamps && baseTimestamps.length > 0) {
+      const basePrice = this.getBasePriceForSymbol(symbol);
+      let currentPrice = basePrice;
+      
+      baseTimestamps.forEach(timestamp => {
+        const volatility = this.getVolatilityForTimeframe(timeframe);
+        const change = (Math.random() - 0.5) * volatility;
+        
+        const open = currentPrice;
+        const close = currentPrice * (1 + change);
+        const high = Math.max(open, close) * (1 + Math.random() * volatility * 0.5);
+        const low = Math.min(open, close) * (1 - Math.random() * volatility * 0.5);
+        const volume = this.getVolumeForTimeframe(timeframe);
+        
+        data.push({
+          time: timestamp,
+          open: parseFloat(open.toFixed(4)),
+          high: parseFloat(high.toFixed(4)),
+          low: parseFloat(low.toFixed(4)),
+          close: parseFloat(close.toFixed(4)),
+          volume
+        });
+        
+        currentPrice = close;
+      });
+      
+      return data;
+    }
+    
+    // Original implementation for main chart
     const adjustedCount = Math.max(200, this.getAdjustedCount(timeframe, count));
-    let currentPrice = this.basePrice;
+    let currentPrice = this.getBasePriceForSymbol(symbol);
     
     for (let i = adjustedCount; i > 0; i--) {
       const timestamp = now - (i * timeframeMs);
@@ -195,6 +225,22 @@ export class DummyDataService {
       case '1y': return Math.floor(base * 52560);
       default: return base;
     }
+  }
+
+  private getBasePriceForSymbol(symbol: string): number {
+    const prices: Record<string, number> = {
+      'AAPL': 175.43,
+      'GOOGL': 142.56,
+      'MSFT': 310.25,
+      'AMZN': 165.78,
+      'TSLA': 245.67,
+      'META': 298.45,
+      'NVDA': 875.23,
+      'NFLX': 485.12,
+      'BTC': 43500.00,
+      'ETH': 2800.00
+    };
+    return prices[symbol] || this.basePrice;
   }
 
   private getSymbolName(symbol: string): string {

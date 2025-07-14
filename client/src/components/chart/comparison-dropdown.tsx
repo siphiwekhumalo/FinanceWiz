@@ -55,7 +55,8 @@ export function ComparisonDropdown() {
     }
 
     try {
-      // Generate data for the comparison symbol
+      // We need to get the main chart data first to align timestamps
+      // For now, generate with same parameters - this will be fixed in the chart container
       const chartData = chartService.dummyService.generateChartData(
         symbolData.symbol,
         config.timeframe,

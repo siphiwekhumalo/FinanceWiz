@@ -1,0 +1,98 @@
+ Root Cause: Time Alignment + Resolution Mismatch
+Your base chart (AAPL) is using 15-minute candles, but your compare data (GOOGL, AMZN):
+
+Might be in different resolutions (1D or 1H),
+
+Might not have data points matching every AAPL timestamp,
+
+Or the comparison data isn’t being resampled/normalized to match the current chart’s timeframe.
+
+✅ How to Fix It (Step-by-Step)
+✅ 1. Resample Compare Series to Match Base Timeframe
+When user changes to 15M, ensure your compare data is:
+
+Grouped by 15-minute buckets
+
+Aligned to the same exact timestamps as AAPL
+
+📌 If using dummy data, simulate missing periods with null to avoid jagged spikes.
+
+✅ 2. Interpolate or Fill Gaps in Data
+If compare symbols have missing timestamps:
+
+Option 1: Fill gaps with the previous value (last known close)
+
+Option 2: Use null to break the line and prevent misleading connections
+
+ts
+Copy
+Edit
+function alignToBaseTimestamps(compareData, baseTimestamps) {
+  const aligned = [];
+
+  let i = 0;
+  for (const baseTime of baseTimestamps) {
+    if (compareData[i]?.time === baseTime) {
+      aligned.push(compareData[i]);
+      i++;
+    } else {
+      aligned.push({ time: baseTime, value: null }); // break line
+    }
+  }
+
+  return aligned;
+}
+✅ 3. Normalize Start Time (optional for % view)
+If you're using % comparison, make sure you:
+
+Capture the start value of each compare series at the same start time as AAPL
+
+Then normalize future points against that value
+
+ts
+Copy
+Edit
+const base = compareData[0].value;
+const normalized = compareData.map(d => ({
+  time: d.time,
+  value: ((d.value - base) / base) * 100
+}));
+✅ 4. Use the Same Resolution for All Series
+If you're using a backend or generator:
+
+ts
+Copy
+Edit
+GET /chart-data?symbol=AAPL&interval=15M
+GET /chart-data?symbol=GOOGL&interval=15M
+GET /chart-data?symbol=AMZN&interval=15M
+🛠 If you're using dummy data, simulate this by slicing arrays or averaging every 15 minutes.
+
+✅ 5. Sync Chart Options for All Series
+Make sure when you render a compare series:
+
+ts
+Copy
+Edit
+chart.addLineSeries({ priceScaleId: '', alignLabels: true });
+And configure your series alignment like:
+
+ts
+Copy
+Edit
+lineSeries.setData(alignedCompareData); // matched timestamp + interpolated
+💡 Bonus Tip: Visual Feedback for Misalignment
+Show a visual warning like:
+
+“Compare series may be missing data at this resolution”
+and fade out broken lines or use dashed strokes.
+
+✅ Final Fix Checklist
+Fix Step	Status
+Match timeframes (resample to base)	✅ Critical
+Align timestamps with nulls	✅ Prevent jagged lines
+Normalize to % if needed	✅ Optional
+Avoid different resolutions per series	✅
+Add missing points with null or lastValue	✅
+Consistent data loader function	✅
+

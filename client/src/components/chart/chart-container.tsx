@@ -621,14 +621,18 @@ export function ChartContainer() {
       ctx.lineWidth = 2;
       ctx.setLineDash([]);
 
-      // Get comparison data for the same visible range as main chart
-      // Ensure comparison data aligns exactly with main chart's visible range
-      const compVisibleData = compSymbol.data.slice(currentScrollOffset, currentScrollOffset + visibleDataCount);
+      // Regenerate comparison data aligned with main chart timestamps
+      // This ensures proper time alignment regardless of chart changes
+      const mainTimestamps = visibleData.map(point => point.time);
+      const chartService = ChartService.getInstance();
+      const alignedCompData = chartService.dummyService.generateChartData(
+        compSymbol.symbol,
+        config.timeframe,
+        100,
+        mainTimestamps
+      );
       
-      if (compVisibleData.length === 0) return;
-      
-      // Ensure comparison data length matches main chart visible data
-      const alignedVisibleData = compVisibleData.slice(0, visibleData.length);
+      const alignedVisibleData = alignedCompData.slice(0, visibleData.length);
 
       ctx.beginPath();
       
