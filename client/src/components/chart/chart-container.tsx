@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { useChartStore } from '@/store/chart-store';
 import { ChartUtils } from '@/utils/chart-utils';
 import { ChartService } from '@/services/chart-service';
@@ -16,6 +16,8 @@ export function ChartContainer() {
   const isDraggingRef = useRef<boolean>(false);
   const lastMousePosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const velocityRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [ohlcPosition, setOhlcPosition] = useState({ x: 20, y: 20 });
+  const [showHelpOverlay, setShowHelpOverlay] = useState(true);
   const chartService = ChartService.getInstance();
 
   const getCurrentTime = () => {
@@ -452,47 +454,60 @@ export function ChartContainer() {
 
   return (
     <div className="w-full h-full relative">
-      {/* Real-time Status Indicator */}
-      <div className="absolute top-4 right-4 z-10">
-        <div className="bg-slate-800 rounded-lg p-2 border border-slate-700">
-          <div className="flex items-center space-x-2">
-            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-success animate-pulse' : 'bg-slate-500'}`} />
-            <span className="text-xs text-slate-400">
-              {isConnected ? 'Live' : 'Offline'}
-            </span>
-            <span className="text-xs text-slate-400">
-              {getCurrentTime()}
-            </span>
+      {/* Draggable OHLC Display */}
+      <div 
+        className="absolute bg-slate-800/90 backdrop-blur-sm rounded-lg p-3 border border-slate-700 cursor-move select-none z-20"
+        style={{ 
+          left: `${ohlcPosition.x}px`, 
+          top: `${ohlcPosition.y}px`
+        }}
+        onMouseDown={(e) => {
+          e.preventDefault();
+          const startX = e.clientX;
+          const startY = e.clientY;
+          const startPos = { ...ohlcPosition };
+          
+          const handleMouseMove = (e: MouseEvent) => {
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+            
+            setOhlcPosition({
+              x: Math.max(0, Math.min(startPos.x + deltaX, (containerRef.current?.offsetWidth || 400) - 300)),
+              y: Math.max(0, Math.min(startPos.y + deltaY, (containerRef.current?.offsetHeight || 400) - 80))
+            });
+          };
+          
+          const handleMouseUp = () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+          };
+          
+          document.addEventListener('mousemove', handleMouseMove);
+          document.addEventListener('mouseup', handleMouseUp);
+        }}
+      >
+        <div className="flex items-center space-x-4">
+          <div>
+            <p className="text-xs text-slate-400">OPEN</p>
+            <p className="text-sm font-mono text-slate-200">${mockOHLC.open}</p>
           </div>
-        </div>
-      </div>
-
-      {/* Price Display Overlay */}
-      <div className="absolute top-4 left-4 z-10">
-        <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
-          <div className="flex items-center space-x-4">
-            <div>
-              <p className="text-xs text-slate-400">OPEN</p>
-              <p className="text-sm font-mono text-slate-200">${mockOHLC.open}</p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-400">HIGH</p>
-              <p className="text-sm font-mono text-success">${mockOHLC.high}</p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-400">LOW</p>
-              <p className="text-sm font-mono text-danger">${mockOHLC.low}</p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-400">CLOSE</p>
-              <p className="text-sm font-mono text-slate-200">${mockOHLC.close}</p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-400">VOLUME</p>
-              <p className="text-sm font-mono text-slate-200">
-                {selectedSymbol?.volume ? ChartUtils.formatVolume(selectedSymbol.volume) : '2.4M'}
-              </p>
-            </div>
+          <div>
+            <p className="text-xs text-slate-400">HIGH</p>
+            <p className="text-sm font-mono text-green-400">${mockOHLC.high}</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-400">LOW</p>
+            <p className="text-sm font-mono text-red-400">${mockOHLC.low}</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-400">CLOSE</p>
+            <p className="text-sm font-mono text-slate-200">${mockOHLC.close}</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-400">VOLUME</p>
+            <p className="text-sm font-mono text-slate-200">
+              {selectedSymbol?.volume ? ChartUtils.formatVolume(selectedSymbol.volume) : '2.4M'}
+            </p>
           </div>
         </div>
       </div>
@@ -515,14 +530,37 @@ export function ChartContainer() {
           </div>
         )}
         
-        {/* Interactive controls overlay */}
-        {!isLoading && (
-          <div className="absolute top-4 right-4 bg-black/80 text-white text-xs px-3 py-2 rounded-lg backdrop-blur-sm border border-slate-600">
-            <div className="space-y-1">
-              <div>• Drag to scroll horizontally</div>
-              <div>• Ctrl/Cmd + Wheel to zoom</div>
-              <div>• Arrow keys to navigate</div>
-              <div>• Home/End for quick jump</div>
+        {/* Connection Status - Bottom of Chart */}
+        <div className="absolute bottom-4 right-4 z-10">
+          <div className="bg-slate-800/90 backdrop-blur-sm rounded-lg p-2 border border-slate-700">
+            <div className="flex items-center space-x-2">
+              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400 animate-pulse' : 'bg-slate-500'}`} />
+              <span className="text-xs text-slate-400">
+                {isConnected ? 'Live' : 'Offline'}
+              </span>
+              <span className="text-xs text-slate-400">
+                {getCurrentTime()}
+              </span>
+            </div>
+          </div>
+        </div>
+        
+        {/* Dismissible Help Overlay */}
+        {!isLoading && showHelpOverlay && (
+          <div className="absolute top-4 right-4 bg-black/80 text-white text-xs px-3 py-2 rounded-lg backdrop-blur-sm border border-slate-600 z-10">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <div>• Drag to scroll horizontally</div>
+                <div>• Ctrl/Cmd + Wheel to zoom</div>
+                <div>• Arrow keys to navigate</div>
+                <div>• Home/End for quick jump</div>
+              </div>
+              <button 
+                onClick={() => setShowHelpOverlay(false)}
+                className="ml-3 text-slate-400 hover:text-white"
+              >
+                ×
+              </button>
             </div>
           </div>
         )}
