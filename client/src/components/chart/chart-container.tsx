@@ -11,7 +11,11 @@ export function ChartContainer() {
   const chartDataRef = useRef<ChartDataPoint[]>([]);
   const animationRef = useRef<number>();
   const scrollOffsetRef = useRef<number>(0);
+  const zoomLevelRef = useRef<number>(1);
   const isScrollingRef = useRef<boolean>(false);
+  const isDraggingRef = useRef<boolean>(false);
+  const lastMousePosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const velocityRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const chartService = ChartService.getInstance();
 
   const getCurrentTime = () => {
@@ -102,8 +106,10 @@ export function ChartContainer() {
       ctx.fillText(timeString, x, height - padding + 20);
     }
 
-    // Calculate visible data range with scroll offset
-    const visibleDataCount = Math.min(data.length, Math.floor(chartWidth / 8)); // Show reasonable number of candles
+    // Calculate visible data range with scroll offset and zoom
+    const baseVisibleCount = Math.floor(chartWidth / 8);
+    const zoomedVisibleCount = Math.max(10, Math.floor(baseVisibleCount / zoomLevelRef.current));
+    const visibleDataCount = Math.min(data.length, zoomedVisibleCount);
     const maxScrollOffset = Math.max(0, data.length - visibleDataCount);
     const currentScrollOffset = Math.min(scrollOffsetRef.current, maxScrollOffset);
     const visibleData = data.slice(currentScrollOffset, currentScrollOffset + visibleDataCount);
@@ -269,43 +275,82 @@ export function ChartContainer() {
     });
     resizeObserver.observe(container);
 
-    // Mouse event handlers for scrolling
+    // Enhanced mouse event handlers for smooth scrolling and zooming
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
       const data = chartDataRef.current;
       if (data.length === 0) return;
       
-      const visibleDataCount = Math.min(data.length, Math.floor((container.offsetWidth - 120) / 8));
-      const maxScrollOffset = Math.max(0, data.length - visibleDataCount);
-      
-      const scrollSpeed = 3;
-      const deltaX = e.deltaX || e.deltaY;
-      scrollOffsetRef.current = Math.max(0, Math.min(maxScrollOffset, scrollOffsetRef.current + (deltaX > 0 ? scrollSpeed : -scrollSpeed)));
+      // Handle zoom with Ctrl/Cmd key
+      if (e.ctrlKey || e.metaKey) {
+        const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+        zoomLevelRef.current = Math.max(0.1, Math.min(5, zoomLevelRef.current * zoomFactor));
+      } else {
+        // Handle horizontal scrolling
+        const baseVisibleCount = Math.floor((container.offsetWidth - 120) / 8);
+        const visibleDataCount = Math.max(10, Math.floor(baseVisibleCount / zoomLevelRef.current));
+        const maxScrollOffset = Math.max(0, data.length - visibleDataCount);
+        
+        const scrollSpeed = Math.max(1, Math.floor(visibleDataCount * 0.1));
+        const deltaX = e.deltaX || e.deltaY;
+        scrollOffsetRef.current = Math.max(0, Math.min(maxScrollOffset, scrollOffsetRef.current + (deltaX > 0 ? scrollSpeed : -scrollSpeed)));
+      }
       
       drawChart(canvas, data);
     };
 
     const handleMouseDown = (e: MouseEvent) => {
-      isScrollingRef.current = true;
+      isDraggingRef.current = true;
       const startX = e.clientX;
+      const startY = e.clientY;
       const startScrollOffset = scrollOffsetRef.current;
       
+      lastMousePosRef.current = { x: startX, y: startY };
+      velocityRef.current = { x: 0, y: 0 };
+      
       const handleMouseMove = (e: MouseEvent) => {
-        if (!isScrollingRef.current) return;
+        if (!isDraggingRef.current) return;
         
         const data = chartDataRef.current;
-        const visibleDataCount = Math.min(data.length, Math.floor((container.offsetWidth - 120) / 8));
+        const baseVisibleCount = Math.floor((container.offsetWidth - 120) / 8);
+        const visibleDataCount = Math.max(10, Math.floor(baseVisibleCount / zoomLevelRef.current));
         const maxScrollOffset = Math.max(0, data.length - visibleDataCount);
-        const dragSpeed = 0.5;
         
         const deltaX = e.clientX - startX;
+        const dragSpeed = visibleDataCount / (container.offsetWidth - 120);
+        
+        // Calculate velocity for momentum scrolling
+        velocityRef.current.x = (e.clientX - lastMousePosRef.current.x) * 0.1;
+        lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+        
         scrollOffsetRef.current = Math.max(0, Math.min(maxScrollOffset, startScrollOffset - deltaX * dragSpeed));
         
         drawChart(canvas, data);
       };
       
       const handleMouseUp = () => {
-        isScrollingRef.current = false;
+        isDraggingRef.current = false;
+        
+        // Apply momentum scrolling
+        const applyMomentum = () => {
+          if (Math.abs(velocityRef.current.x) > 0.1) {
+            const data = chartDataRef.current;
+            const baseVisibleCount = Math.floor((container.offsetWidth - 120) / 8);
+            const visibleDataCount = Math.max(10, Math.floor(baseVisibleCount / zoomLevelRef.current));
+            const maxScrollOffset = Math.max(0, data.length - visibleDataCount);
+            
+            scrollOffsetRef.current = Math.max(0, Math.min(maxScrollOffset, scrollOffsetRef.current - velocityRef.current.x));
+            velocityRef.current.x *= 0.95; // Damping
+            
+            drawChart(canvas, data);
+            requestAnimationFrame(applyMomentum);
+          }
+        };
+        
+        if (Math.abs(velocityRef.current.x) > 0.5) {
+          applyMomentum();
+        }
+        
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
       };
@@ -314,9 +359,59 @@ export function ChartContainer() {
       document.addEventListener('mouseup', handleMouseUp);
     };
 
+    // Keyboard event handlers for enhanced navigation
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const data = chartDataRef.current;
+      if (data.length === 0) return;
+      
+      const baseVisibleCount = Math.floor((container.offsetWidth - 120) / 8);
+      const visibleDataCount = Math.max(10, Math.floor(baseVisibleCount / zoomLevelRef.current));
+      const maxScrollOffset = Math.max(0, data.length - visibleDataCount);
+      
+      switch (e.key) {
+        case 'ArrowLeft':
+          e.preventDefault();
+          scrollOffsetRef.current = Math.max(0, scrollOffsetRef.current - 5);
+          drawChart(canvas, data);
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          scrollOffsetRef.current = Math.min(maxScrollOffset, scrollOffsetRef.current + 5);
+          drawChart(canvas, data);
+          break;
+        case 'Home':
+          e.preventDefault();
+          scrollOffsetRef.current = 0;
+          drawChart(canvas, data);
+          break;
+        case 'End':
+          e.preventDefault();
+          scrollOffsetRef.current = maxScrollOffset;
+          drawChart(canvas, data);
+          break;
+        case '+':
+        case '=':
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            zoomLevelRef.current = Math.min(5, zoomLevelRef.current * 1.2);
+            drawChart(canvas, data);
+          }
+          break;
+        case '-':
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            zoomLevelRef.current = Math.max(0.1, zoomLevelRef.current * 0.8);
+            drawChart(canvas, data);
+          }
+          break;
+      }
+    };
+
     // Add event listeners
     canvas.addEventListener('wheel', handleWheel, { passive: false });
     canvas.addEventListener('mousedown', handleMouseDown);
+    canvas.addEventListener('keydown', handleKeyDown);
+    canvas.setAttribute('tabindex', '0'); // Make canvas focusable for keyboard events
 
     // Load and draw chart data
     const loadData = async () => {
@@ -341,6 +436,7 @@ export function ChartContainer() {
       resizeObserver.disconnect();
       canvas.removeEventListener('wheel', handleWheel);
       canvas.removeEventListener('mousedown', handleMouseDown);
+      canvas.removeEventListener('keydown', handleKeyDown);
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
@@ -405,7 +501,7 @@ export function ChartContainer() {
       <div ref={containerRef} id="chart-container" className="w-full h-full bg-slate-900 relative overflow-hidden">
         <canvas
           ref={canvasRef}
-          className="w-full h-full cursor-grab active:cursor-grabbing"
+          className="w-full h-full cursor-grab active:cursor-grabbing focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded-sm"
           style={{ display: 'block' }}
         />
         
@@ -419,10 +515,15 @@ export function ChartContainer() {
           </div>
         )}
         
-        {/* Scroll instruction overlay */}
+        {/* Interactive controls overlay */}
         {!isLoading && (
-          <div className="absolute top-4 right-4 bg-black/60 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">
-            Mouse wheel or drag to scroll
+          <div className="absolute top-4 right-4 bg-black/80 text-white text-xs px-3 py-2 rounded-lg backdrop-blur-sm border border-slate-600">
+            <div className="space-y-1">
+              <div>• Drag to scroll horizontally</div>
+              <div>• Ctrl/Cmd + Wheel to zoom</div>
+              <div>• Arrow keys to navigate</div>
+              <div>• Home/End for quick jump</div>
+            </div>
           </div>
         )}
       </div>
