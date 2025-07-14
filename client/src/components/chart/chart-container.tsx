@@ -601,8 +601,8 @@ export function ChartContainer() {
           </motion.div>
         )}
         
-        {/* Connection Status - Bottom of Chart */}
-        <div className="absolute bottom-4 right-4 z-10">
+        {/* Connection Status - Top Right of Chart */}
+        <div className="absolute top-4 left-4 z-10">
           <div className="bg-slate-800/90 backdrop-blur-sm rounded-lg p-2 border border-slate-700">
             <div className="flex items-center space-x-2">
               <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400 animate-pulse' : 'bg-slate-500'}`} />
