@@ -138,3 +138,7 @@ Preferred communication style: Simple, everyday language.
 - Created draggable OHLC display block and dismissible help overlay
 - Fixed scrolling consistency across all timeframes with minimum 200 data points
 - Enhanced HD interface with devicePixelRatio scaling and anti-aliased rendering
+- **Implemented ChartIQ-style comparison symbols with percentage-based overlays (January 2025)**
+- **Fixed comparison symbol positioning to use normalized percentage changes from baseline**
+- **Added dynamic Y-axis that switches to percentage format when comparison symbols are active**
+- **Resolved cursor movement interference with comparison symbol stability**
