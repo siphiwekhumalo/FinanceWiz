@@ -31,6 +31,10 @@ interface ChartStore {
   toggleVolume: () => void;
   toggleCrosshair: () => void;
   resetZoom: () => void;
+  
+  // Chart instance management
+  chartInstance: any;
+  setChartInstance: (instance: any) => void;
 }
 
 const defaultConfig: ChartConfig = {
@@ -51,6 +55,7 @@ export const useChartStore = create<ChartStore>((set, get) => ({
   volumeData: [],
   isLoading: false,
   isConnected: false,
+  chartInstance: null,
   
   setChartType: (type) => set((state) => ({
     config: { ...state.config, chartType: type }
@@ -123,7 +128,13 @@ export const useChartStore = create<ChartStore>((set, get) => ({
   })),
   
   resetZoom: () => {
-    // This would trigger a chart reset in the actual implementation
-    console.log('Reset zoom');
+    // Custom chart zoom reset - trigger redraw
+    const state = get();
+    if (state.chartInstance && state.chartInstance.redraw) {
+      state.chartInstance.redraw();
+    }
   },
+  
+  // Chart instance management
+  setChartInstance: (instance) => set({ chartInstance: instance }),
 }));

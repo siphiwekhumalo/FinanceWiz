@@ -4,7 +4,7 @@ import { DummyDataService } from './dummy-data-service';
 
 export class ChartService {
   private static instance: ChartService;
-  private dummyService: DummyDataService;
+  public dummyService: DummyDataService;
   
   private constructor() {
     this.dummyService = DummyDataService.getInstance();

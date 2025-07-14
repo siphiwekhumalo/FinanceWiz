@@ -1,88 +1,91 @@
-import { BarChart3, TrendingUp, Activity, Download, ZoomOut, Crosshair } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw, Grid, Crosshair, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChartStore } from '@/store/chart-store';
-import { ChartType, Timeframe } from '@/types/chart-types';
-
-const chartTypes: { type: ChartType; icon: React.ReactNode; label: string }[] = [
-  { type: 'candlestick', icon: <BarChart3 className="h-4 w-4" />, label: 'Candlestick' },
-  { type: 'line', icon: <TrendingUp className="h-4 w-4" />, label: 'Line' },
-  { type: 'area', icon: <Activity className="h-4 w-4" />, label: 'Area' },
-];
-
-const timeframes: Timeframe[] = ['1m', '5m', '15m', '1h', '4h', '1d', '1w'];
+import { Timeframe } from '@/types/chart-types';
 
 export function ChartToolbar() {
-  const { config, setChartType, setTimeframe, resetZoom, toggleCrosshair } = useChartStore();
+  const { config, setTimeframe, toggleVolume, toggleCrosshair, resetZoom } = useChartStore();
 
-  const handleExport = () => {
-    // Implementation would depend on chart library
-    console.log('Export chart');
-  };
+  const timeframes: { value: Timeframe; label: string }[] = [
+    { value: '1m', label: '1M' },
+    { value: '5m', label: '5M' },
+    { value: '15m', label: '15M' },
+    { value: '1h', label: '1H' },
+    { value: '4h', label: '4H' },
+    { value: '1d', label: '1D' },
+    { value: '1w', label: '1W' },
+  ];
 
   return (
-    <div className="bg-slate-800 border-b border-slate-700 p-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          {/* Chart Type Selector */}
-          <div className="flex items-center space-x-2">
-            {chartTypes.map(({ type, icon, label }) => (
-              <Button
-                key={type}
-                variant={config.chartType === type ? 'default' : 'ghost'}
-                size="sm"
-                className="flex items-center space-x-1"
-                onClick={() => setChartType(type)}
-              >
-                {icon}
-                <span>{label}</span>
-              </Button>
-            ))}
-          </div>
+    <div className="flex items-center justify-between bg-slate-800 border-b border-slate-700 p-2">
+      {/* Left side - Timeframe selector */}
+      <div className="flex items-center space-x-1">
+        {timeframes.map((timeframe) => (
+          <Button
+            key={timeframe.value}
+            variant={config.timeframe === timeframe.value ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setTimeframe(timeframe.value)}
+            className="px-3 py-1 h-8 text-xs"
+          >
+            {timeframe.label}
+          </Button>
+        ))}
+      </div>
 
-          {/* Timeframe Selector */}
-          <div className="flex items-center space-x-1 bg-slate-700 rounded-lg p-1">
-            {timeframes.map(timeframe => (
-              <Button
-                key={timeframe}
-                variant={config.timeframe === timeframe ? 'default' : 'ghost'}
-                size="sm"
-                className="px-2 py-1 text-xs"
-                onClick={() => setTimeframe(timeframe)}
-              >
-                {timeframe}
-              </Button>
-            ))}
-          </div>
-        </div>
+      {/* Right side - Chart controls */}
+      <div className="flex items-center space-x-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {/* TODO: Implement zoom in */}}
+          className="px-2 py-1 h-8"
+          title="Zoom In"
+        >
+          <ZoomIn className="h-4 w-4" />
+        </Button>
+        
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {/* TODO: Implement zoom out */}}
+          className="px-2 py-1 h-8"
+          title="Zoom Out"
+        >
+          <ZoomOut className="h-4 w-4" />
+        </Button>
+        
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={resetZoom}
+          className="px-2 py-1 h-8"
+          title="Reset Zoom"
+        >
+          <RotateCcw className="h-4 w-4" />
+        </Button>
 
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleExport}
-            className="text-slate-400 hover:text-white hover:bg-slate-700"
-          >
-            <Download className="h-4 w-4" />
-          </Button>
-          
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={resetZoom}
-            className="text-slate-400 hover:text-white hover:bg-slate-700"
-          >
-            <ZoomOut className="h-4 w-4" />
-          </Button>
-          
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleCrosshair}
-            className="text-slate-400 hover:text-white hover:bg-slate-700"
-          >
-            <Crosshair className="h-4 w-4" />
-          </Button>
-        </div>
+        <div className="w-px h-4 bg-slate-600 mx-1" />
+        
+        <Button
+          variant={config.showVolume ? "default" : "ghost"}
+          size="sm"
+          onClick={toggleVolume}
+          className="px-2 py-1 h-8"
+          title="Toggle Volume"
+        >
+          <Volume2 className="h-4 w-4" />
+        </Button>
+        
+        <Button
+          variant={config.showCrosshair ? "default" : "ghost"}
+          size="sm"
+          onClick={toggleCrosshair}
+          className="px-2 py-1 h-8"
+          title="Toggle Crosshair"
+        >
+          <Crosshair className="h-4 w-4" />
+        </Button>
       </div>
     </div>
   );
