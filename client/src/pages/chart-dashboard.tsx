@@ -155,7 +155,7 @@ export default function ChartDashboard() {
   if (isFullscreen) {
     return (
       <div className="h-screen flex flex-col bg-slate-900 text-slate-100">
-        <ChartToolbar />
+        <ChartToolbar onToggleAdvancedPanel={() => setShowAdvancedPanel(!showAdvancedPanel)} />
         
         <div className="flex-1 bg-slate-900 relative border-b border-slate-700">
           <ChartContainer />
@@ -178,7 +178,7 @@ export default function ChartDashboard() {
       
       <div className="flex flex-1 overflow-hidden">
         <main className="flex-1 flex flex-col mr-72">
-          <ChartToolbar />
+          <ChartToolbar onToggleAdvancedPanel={() => setShowAdvancedPanel(!showAdvancedPanel)} />
           
           <div className="flex-1 bg-slate-900 relative border-b border-slate-700">
             <ChartContainer />

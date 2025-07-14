@@ -1,4 +1,4 @@
-import { Crosshair, Volume2, Maximize, Minimize } from 'lucide-react';
+import { Crosshair, Volume2, Maximize, Minimize, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChartStore } from '@/store/chart-store';
 import { useSettingsStore } from '@/store/settings-store';
@@ -10,7 +10,11 @@ import { SymbolDropdown } from './symbol-dropdown';
 import { DataSourceToggle } from './data-source-toggle';
 import { ComparisonDropdown } from './comparison-dropdown';
 
-export function ChartToolbar() {
+interface ChartToolbarProps {
+  onToggleAdvancedPanel?: () => void;
+}
+
+export function ChartToolbar({ onToggleAdvancedPanel }: ChartToolbarProps) {
   const { toggleVolume, toggleCrosshair, resetZoom, zoomIn, zoomOut, config } = useChartStore();
   const { isFullscreen, setFullscreen } = useSettingsStore();
 
@@ -72,6 +76,18 @@ export function ChartToolbar() {
           title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
         >
           {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+        </Button>
+        
+        <div className="w-px h-4 bg-slate-600 mx-1" />
+        
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onToggleAdvancedPanel}
+          className="px-2 py-1 h-8"
+          title="Advanced Features"
+        >
+          <TrendingUp className="h-4 w-4" />
         </Button>
       </div>
     </div>
