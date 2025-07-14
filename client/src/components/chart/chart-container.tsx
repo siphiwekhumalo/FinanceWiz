@@ -98,24 +98,27 @@ export function ChartContainer() {
       ctx.stroke();
     }
 
-    // Draw price axis labels
+    // Draw price axis labels (Y-axis) with better formatting for large datasets
     ctx.fillStyle = '#F1F5F9';
-    ctx.font = '12px sans-serif';
+    ctx.font = '11px monospace';
     ctx.textAlign = 'right';
     for (let i = 0; i <= 5; i++) {
       const price = maxPrice - (i * priceRange) / 5;
       const y = padding + (i * chartHeight) / 5;
-      ctx.fillText(price.toFixed(2), width - padding + 5, y + 4);
-    }
-
-    // Draw time axis labels
-    ctx.textAlign = 'center';
-    for (let i = 0; i <= 4; i++) {
-      const time = minTime + (i * timeRange) / 4;
-      const x = padding + (i * chartWidth) / 4;
-      const date = new Date(time * 1000);
-      const timeString = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      ctx.fillText(timeString, x, height - padding + 20);
+      
+      // Format price based on value for better readability
+      let formattedPrice = '';
+      if (price >= 1000000) {
+        formattedPrice = `$${(price / 1000000).toFixed(1)}M`;
+      } else if (price >= 1000) {
+        formattedPrice = `$${(price / 1000).toFixed(1)}K`;
+      } else if (price >= 1) {
+        formattedPrice = `$${price.toFixed(2)}`;
+      } else {
+        formattedPrice = `$${price.toFixed(4)}`;
+      }
+      
+      ctx.fillText(formattedPrice, width - padding + 5, y + 4);
     }
 
     // Calculate visible data range with scroll offset and zoom
@@ -128,6 +131,71 @@ export function ChartContainer() {
     scrollOffsetRef.current = Math.max(0, Math.min(scrollOffsetRef.current, maxScrollOffset));
     const currentScrollOffset = scrollOffsetRef.current;
     const visibleData = data.slice(currentScrollOffset, currentScrollOffset + visibleDataCount);
+
+    // Draw time axis labels (X-axis) with proper date formatting for large datasets
+    ctx.textAlign = 'center';
+    ctx.font = '10px monospace';
+    const visibleDataForLabels = visibleData.length > 0 ? visibleData : data;
+    
+    // Determine number of labels based on chart width to avoid overlap
+    const maxLabels = Math.min(8, Math.floor(chartWidth / 80));
+    
+    for (let i = 0; i <= maxLabels; i++) {
+      const x = padding + (i * chartWidth) / maxLabels;
+      const dataIndex = Math.floor((i / maxLabels) * (visibleDataForLabels.length - 1));
+      
+      if (dataIndex < visibleDataForLabels.length) {
+        const time = new Date(visibleDataForLabels[dataIndex].time * 1000);
+        let timeStr = '';
+        
+        // Format based on timeframe for optimal readability
+        switch (config.timeframe) {
+          case '1m':
+          case '5m':
+          case '15m':
+            timeStr = time.toLocaleTimeString([], { 
+              hour: '2-digit', 
+              minute: '2-digit',
+              hour12: false
+            });
+            break;
+          case '1h':
+          case '4h':
+            timeStr = time.toLocaleDateString([], { 
+              month: 'short', 
+              day: 'numeric',
+              hour: 'numeric'
+            });
+            break;
+          case '1d':
+            timeStr = time.toLocaleDateString([], { 
+              month: 'short', 
+              day: 'numeric'
+            });
+            break;
+          case '1w':
+            timeStr = time.toLocaleDateString([], { 
+              month: 'short', 
+              day: 'numeric',
+              year: '2-digit'
+            });
+            break;
+          case '1y':
+            timeStr = time.toLocaleDateString([], { 
+              month: 'short', 
+              year: 'numeric'
+            });
+            break;
+          default:
+            timeStr = time.toLocaleDateString([], { 
+              month: 'short', 
+              day: 'numeric'
+            });
+        }
+        
+        ctx.fillText(timeStr, x, height - padding + 20);
+      }
+    }
 
     // Draw chart based on type
     if (config.chartType === 'candlestick') {

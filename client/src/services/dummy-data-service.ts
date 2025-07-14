@@ -17,8 +17,8 @@ export class DummyDataService {
     const now = Date.now();
     const timeframeMs = this.getTimeframeMs(timeframe);
     
-    // Generate more data points for longer timeframes
-    const adjustedCount = this.getAdjustedCount(timeframe, count);
+    // Ensure minimum 200 data points for better chart rendering
+    const adjustedCount = Math.max(200, this.getAdjustedCount(timeframe, count));
     let currentPrice = this.basePrice;
     
     for (let i = adjustedCount; i > 0; i--) {
