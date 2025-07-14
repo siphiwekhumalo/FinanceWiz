@@ -666,15 +666,27 @@ export function ChartContainer() {
           }
         });
       } else {
-        // Absolute mode: overlay comparison symbols on main chart's price scale
-        // This is how professional trading platforms display comparison symbols
+        // Absolute mode: normalize comparison symbols to percentage changes
+        // This creates the professional overlay effect shown in ChartIQ
+        const baselinePrice = alignedVisibleData[0]?.close || 0;
+        const mainBaselinePrice = visibleData[0]?.close || 0;
+        
+        if (baselinePrice === 0 || mainBaselinePrice === 0) return;
+        
         alignedVisibleData.forEach((point, index) => {
-          // Use main chart's visible data length for consistent X positioning
           const x = padding + (index * chartWidth) / Math.max(1, visibleData.length - 1);
           
-          // Map comparison symbol price directly to main chart's price axis
-          // This allows true price comparison with the main symbol
-          const y = padding + ((maxPrice - point.close) / priceRange) * chartHeight;
+          // Calculate percentage changes from baseline for both symbols
+          const compPercentageChange = ((point.close - baselinePrice) / baselinePrice);
+          const mainPercentageChange = ((visibleData[index]?.close || mainBaselinePrice) - mainBaselinePrice) / mainBaselinePrice;
+          
+          // Position comparison symbol relative to main symbol's percentage change
+          // This creates the overlay effect where both symbols move together
+          const relativeChange = compPercentageChange - mainPercentageChange;
+          
+          // Map to chart coordinates with main symbol as reference
+          const mainY = padding + ((maxPrice - (visibleData[index]?.close || mainBaselinePrice)) / priceRange) * chartHeight;
+          const y = mainY + (relativeChange * chartHeight * 0.3); // Scale the relative difference
           
           if (index === 0) {
             ctx.moveTo(x, y);
@@ -712,9 +724,19 @@ export function ChartContainer() {
             x = padding + (index * chartWidth) / Math.max(1, visibleData.length - 1);
             y = padding + chartHeight - (normalizedY * chartHeight);
           } else {
-            // Absolute mode: use main chart's price scale for comparison symbols
+            // Absolute mode: use percentage-based positioning relative to main symbol
+            const basePrice = alignedVisibleData[0]?.close || 0;
+            const mainBasePrice = visibleData[0]?.close || 0;
+            
+            if (basePrice === 0 || mainBasePrice === 0) return;
+            
+            const compPercentageChange = ((point.close - basePrice) / basePrice);
+            const mainPercentageChange = ((visibleData[index]?.close || mainBasePrice) - mainBasePrice) / mainBasePrice;
+            const relativeChange = compPercentageChange - mainPercentageChange;
+            
             x = padding + (index * chartWidth) / Math.max(1, visibleData.length - 1);
-            y = padding + ((maxPrice - point.close) / priceRange) * chartHeight;
+            const mainY = padding + ((maxPrice - (visibleData[index]?.close || mainBasePrice)) / priceRange) * chartHeight;
+            y = mainY + (relativeChange * chartHeight * 0.3);
           }
           
           if (index === 0) {
