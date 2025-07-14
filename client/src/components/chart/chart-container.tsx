@@ -1377,7 +1377,7 @@ export function ChartContainer() {
 
       // For cursor tool, handle scrolling
       if (config.selectedTool === 'cursor') {
-        handleMouseDownDrag(e);
+        handleMouseDown(e);
       }
     };
 
@@ -1554,10 +1554,10 @@ export function ChartContainer() {
       <div ref={containerRef} id="chart-container" className="w-full h-full bg-slate-900 relative overflow-hidden">
         <canvas
           ref={canvasRef}
-          className={`w-full h-full focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded-sm ${
+          className={`w-full h-full focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded-sm relative z-0 ${
             config.selectedTool === 'cursor' ? 'cursor-grab active:cursor-grabbing' : 'cursor-crosshair'
           }`}
-          style={{ display: 'block' }}
+          style={{ display: 'block', pointerEvents: 'auto' }}
           onContextMenu={handleContextMenu}
         />
         

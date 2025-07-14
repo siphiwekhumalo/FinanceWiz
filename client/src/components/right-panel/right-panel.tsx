@@ -20,7 +20,7 @@ export function RightPanel() {
   };
 
   return (
-    <aside className="w-72 bg-slate-800 border-l border-slate-700 overflow-y-auto fixed right-0 top-0 bottom-0 z-30 pt-20">
+    <aside className="w-72 bg-slate-800 border-l border-slate-700 overflow-y-auto fixed right-0 top-0 bottom-0 z-10 pt-20">
       <OrderBook />
       <RecentTrades />
       <MarketStats />
