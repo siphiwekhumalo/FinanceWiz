@@ -1312,31 +1312,96 @@ export function ChartContainer() {
       }
     };
 
-    // Handle mouse move for crosshair (only when cursor tool is active)
+    // Handle mouse move for crosshair and drawing tools
     const handleMouseMoveNative = (e: MouseEvent) => {
-      if (config.selectedTool !== 'cursor' || isDraggingRef.current) return;
-      
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
       
       const chartCoords = canvasToChartCoords(x, y, chartDataRef.current);
-      if (chartCoords && config.showCrosshair) {
-        crosshairPositionRef.current = chartCoords;
-        // Immediately redraw just the crosshair without triggering React re-render
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          drawChart(canvas, chartDataRef.current);
+      if (!chartCoords) return;
+
+      // Handle drawing tool mouse move
+      if (config.selectedTool !== 'cursor') {
+        // Call the existing handleMouseMove for drawing functionality
+        const syntheticEvent = {
+          clientX: e.clientX,
+          clientY: e.clientY,
+          preventDefault: () => e.preventDefault(),
+          stopPropagation: () => e.stopPropagation(),
+        } as React.MouseEvent<HTMLCanvasElement>;
+        
+        handleMouseMove(syntheticEvent);
+        return;
+      }
+
+      // Handle crosshair for cursor tool
+      if (config.selectedTool === 'cursor' && !isDraggingRef.current) {
+        if (config.showCrosshair) {
+          crosshairPositionRef.current = chartCoords;
+          // Immediately redraw just the crosshair without triggering React re-render
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            drawChart(canvas, chartDataRef.current);
+          }
         }
+      }
+    };
+
+    // Native mouse down handler that combines drawing and scrolling
+    const handleMouseDownNative = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      const chartCoords = canvasToChartCoords(x, y, chartDataRef.current);
+      if (!chartCoords) return;
+
+      // Only prevent default behavior when using drawing tools, not cursor
+      if (config.selectedTool !== 'cursor') {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Call the existing handleMouseDown for drawing functionality
+        const syntheticEvent = {
+          clientX: e.clientX,
+          clientY: e.clientY,
+          preventDefault: () => e.preventDefault(),
+          stopPropagation: () => e.stopPropagation(),
+        } as React.MouseEvent<HTMLCanvasElement>;
+        
+        handleMouseDown(syntheticEvent);
+        return;
+      }
+
+      // For cursor tool, handle scrolling
+      if (config.selectedTool === 'cursor') {
+        handleMouseDownDrag(e);
+      }
+    };
+
+    // Native mouse up handler for drawing tools
+    const handleMouseUpNative = (e: MouseEvent) => {
+      if (config.selectedTool !== 'cursor') {
+        // Call the existing handleMouseUp for drawing functionality
+        const syntheticEvent = {
+          clientX: e.clientX,
+          clientY: e.clientY,
+          preventDefault: () => e.preventDefault(),
+          stopPropagation: () => e.stopPropagation(),
+        } as React.MouseEvent<HTMLCanvasElement>;
+        
+        handleMouseUp(syntheticEvent);
       }
     };
 
     // Add event listeners
     canvas.addEventListener('wheel', handleWheel, { passive: false });
-    canvas.addEventListener('mousedown', handleMouseDown);
+    canvas.addEventListener('mousedown', handleMouseDownNative);
+    canvas.addEventListener('mousemove', handleMouseMoveNative);
+    canvas.addEventListener('mouseup', handleMouseUpNative);
     canvas.addEventListener('keydown', handleKeyDown);
     canvas.addEventListener('mouseleave', handleMouseLeave);
-    canvas.addEventListener('mousemove', handleMouseMoveNative);
     canvas.setAttribute('tabindex', '0'); // Make canvas focusable for keyboard events
 
     // Load and draw chart data
@@ -1361,22 +1426,23 @@ export function ChartContainer() {
     return () => {
       resizeObserver.disconnect();
       canvas.removeEventListener('wheel', handleWheel);
-      canvas.removeEventListener('mousedown', handleMouseDown);
+      canvas.removeEventListener('mousedown', handleMouseDownNative);
+      canvas.removeEventListener('mousemove', handleMouseMoveNative);
+      canvas.removeEventListener('mouseup', handleMouseUpNative);
       canvas.removeEventListener('keydown', handleKeyDown);
       canvas.removeEventListener('mouseleave', handleMouseLeave);
-      canvas.removeEventListener('mousemove', handleMouseMoveNative);
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [config.symbol, config.chartType, config.timeframe, config.dataSource, config.showVolume, drawChart, isInDrawMode, config.selectedTool]);
+  }, [config.symbol, config.chartType, config.timeframe, config.dataSource, config.showVolume, isInDrawMode, config.selectedTool]);
 
   // Update chart when data changes
   useEffect(() => {
     if (canvasRef.current && chartDataRef.current.length > 0) {
       drawChart(canvasRef.current, chartDataRef.current);
     }
-  }, [config.showCrosshair, drawChart]);
+  }, [config.showCrosshair, config.comparisonSymbols, drawChart]);
 
   // Initialize chart instance for store
   useEffect(() => {
@@ -1491,9 +1557,6 @@ export function ChartContainer() {
             config.selectedTool === 'cursor' ? 'cursor-grab active:cursor-grabbing' : 'cursor-crosshair'
           }`}
           style={{ display: 'block' }}
-          onMouseDown={handleMouseDown}
-          onMouseMove={config.selectedTool === 'cursor' ? undefined : handleMouseMove}
-          onMouseUp={handleMouseUp}
           onContextMenu={handleContextMenu}
         />
         
