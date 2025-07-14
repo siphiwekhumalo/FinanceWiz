@@ -13,6 +13,9 @@ export interface ComparisonSymbol {
   data: ChartDataPoint[];
   color: string;
   enabled: boolean;
+  style: 'line' | 'area' | 'bar';
+  change?: number;
+  changePercent?: number;
 }
 
 export interface VolumeDataPoint {
@@ -73,6 +76,7 @@ export interface WhiteLabelConfig {
 export type ChartType = 'candlestick' | 'line' | 'area';
 export type Timeframe = '1m' | '5m' | '15m' | '1h' | '4h' | '1d' | '1w' | '1y';
 export type DataSource = 'dummy' | 'real';
+export type ComparisonMode = 'absolute' | 'percentage';
 export type DrawingTool = 'cursor' | 'trendline' | 'fibonacci' | 'rectangle' | 'text';
 
 export interface DrawingObject {
@@ -102,6 +106,7 @@ export interface ChartConfig {
   showCrosshair: boolean;
   drawingObjects: DrawingObject[];
   comparisonSymbols: ComparisonSymbol[];
+  comparisonMode: ComparisonMode;
 }
 
 export interface PriceUpdate {

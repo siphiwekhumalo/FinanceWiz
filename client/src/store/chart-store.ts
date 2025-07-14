@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { ChartConfig, ChartType, Timeframe, DataSource, DrawingTool, TechnicalIndicator, SymbolData, ChartDataPoint, VolumeDataPoint, ComparisonSymbol } from '@/types/chart-types';
+import { ChartConfig, ChartType, Timeframe, DataSource, DrawingTool, TechnicalIndicator, SymbolData, ChartDataPoint, VolumeDataPoint, ComparisonSymbol, ComparisonMode } from '@/types/chart-types';
 
 interface ChartStore {
   config: ChartConfig;
@@ -46,7 +46,9 @@ interface ChartStore {
   addComparisonSymbol: (symbol: ComparisonSymbol) => void;
   removeComparisonSymbol: (symbol: string) => void;
   toggleComparisonSymbol: (symbol: string) => void;
+  updateComparisonSymbol: (symbol: string, updates: Partial<ComparisonSymbol>) => void;
   clearComparisonSymbols: () => void;
+  setComparisonMode: (mode: ComparisonMode) => void;
 }
 
 const defaultConfig: ChartConfig = {
@@ -60,6 +62,7 @@ const defaultConfig: ChartConfig = {
   showCrosshair: true,
   drawingObjects: [],
   comparisonSymbols: [],
+  comparisonMode: 'absolute',
 };
 
 export const useChartStore = create<ChartStore>((set, get) => ({
@@ -204,7 +207,20 @@ export const useChartStore = create<ChartStore>((set, get) => ({
     }
   })),
   
+  updateComparisonSymbol: (symbol, updates) => set((state) => ({
+    config: { 
+      ...state.config, 
+      comparisonSymbols: state.config.comparisonSymbols.map(s => 
+        s.symbol === symbol ? { ...s, ...updates } : s
+      )
+    }
+  })),
+  
   clearComparisonSymbols: () => set((state) => ({
     config: { ...state.config, comparisonSymbols: [] }
+  })),
+  
+  setComparisonMode: (mode) => set((state) => ({
+    config: { ...state.config, comparisonMode: mode }
   })),
 }));

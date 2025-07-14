@@ -5,6 +5,7 @@ import { ChartUtils } from '@/utils/chart-utils';
 import { ChartService } from '@/services/chart-service';
 import { ChartDataPoint, DrawingObject } from '@/types/chart-types';
 import { nanoid } from 'nanoid';
+import { ComparisonLegend } from './comparison-legend';
 
 export function ChartContainer() {
   const { isLoading, selectedSymbol, isConnected, config, setChartInstance, addDrawingObject, updateDrawingObject, removeDrawingObject } = useChartStore();
@@ -626,34 +627,71 @@ export function ChartContainer() {
 
       const compVisibleData = compSymbol.data.slice(startIndex, endIndex);
       
-      // Normalize comparison data to main symbol's price range
-      const compPrices = compVisibleData.map(d => d.close);
-      const compMinPrice = Math.min(...compPrices);
-      const compMaxPrice = Math.max(...compPrices);
-      const compPriceRange = compMaxPrice - compMinPrice;
+      if (config.comparisonMode === 'percentage') {
+        // Percentage mode: normalize to percentage change from first visible point
+        const basePrice = compVisibleData[0]?.close || 0;
+        const mainBasePrice = visibleData[0]?.close || 0;
+        
+        if (basePrice === 0 || mainBasePrice === 0) return;
+        
+        ctx.beginPath();
+        
+        compVisibleData.forEach((point, index) => {
+          // Calculate percentage change
+          const compPercentChange = ((point.close - basePrice) / basePrice) * 100;
+          const mainPercentChange = ((visibleData[index]?.close || mainBasePrice) - mainBasePrice) / mainBasePrice * 100;
+          
+          // Map percentage changes to chart coordinates
+          const percentageRange = 20; // Show ±20% range
+          const normalizedY = (compPercentChange + percentageRange) / (2 * percentageRange);
+          
+          const x = padding + index * xStep;
+          const y = padding + chartHeight - (normalizedY * chartHeight);
+          
+          if (index === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        });
+      } else {
+        // Absolute mode: normalize comparison data to main symbol's price range
+        const compPrices = compVisibleData.map(d => d.close);
+        const compMinPrice = Math.min(...compPrices);
+        const compMaxPrice = Math.max(...compPrices);
+        const compPriceRange = compMaxPrice - compMinPrice;
 
-      if (compPriceRange === 0) return;
+        if (compPriceRange === 0) return;
 
-      ctx.beginPath();
+        ctx.beginPath();
+        
+        compVisibleData.forEach((point, index) => {
+          // Normalize the comparison price to the main symbol's range
+          const normalizedPrice = mainMinPrice + ((point.close - compMinPrice) / compPriceRange) * mainPriceRange;
+          
+          const x = padding + index * xStep;
+          const y = padding + chartHeight - ((normalizedPrice - mainMinPrice) / mainPriceRange) * chartHeight;
+          
+          if (index === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        });
+      }
+
+      // Apply different stroke styles based on comparison symbol style
+      if (compSymbol.style === 'area') {
+        ctx.globalAlpha = 0.2;
+        ctx.fillStyle = compSymbol.color;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
       
-      compVisibleData.forEach((point, index) => {
-        // Normalize the comparison price to the main symbol's range
-        const normalizedPrice = mainMinPrice + ((point.close - compMinPrice) / compPriceRange) * mainPriceRange;
-        
-        const x = padding + index * xStep;
-        const y = padding + chartHeight - ((normalizedPrice - mainMinPrice) / mainPriceRange) * chartHeight;
-        
-        if (index === 0) {
-          ctx.moveTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
-        }
-      });
-
       ctx.stroke();
       ctx.restore();
     });
-  }, [config.comparisonSymbols]);
+  }, [config.comparisonSymbols, config.comparisonMode]);
 
   // Draw draggable endpoints
   const drawEndpoints = useCallback((ctx: CanvasRenderingContext2D, obj: DrawingObject, data: ChartDataPoint[], isSelected: boolean) => {
@@ -1407,6 +1445,9 @@ export function ChartContainer() {
           onMouseUp={handleMouseUp}
           onContextMenu={handleContextMenu}
         />
+        
+        {/* Comparison Legend */}
+        <ComparisonLegend />
         
         {isLoading && (
           <motion.div 
