@@ -149,14 +149,16 @@ export const useChartStore = create<ChartStore>((set, get) => ({
   resetZoom: () => {
     // Custom chart zoom reset - trigger redraw
     const state = get();
-    if (state.chartInstance && state.chartInstance.redraw) {
-      state.chartInstance.redraw();
+    console.log('Store resetZoom called, chartInstance:', state.chartInstance);
+    if (state.chartInstance && state.chartInstance.resetZoom) {
+      state.chartInstance.resetZoom();
     }
   },
   
   zoomIn: () => {
     // Zoom in by 1.2x
     const state = get();
+    console.log('Store zoomIn called, chartInstance:', state.chartInstance);
     if (state.chartInstance && state.chartInstance.zoomIn) {
       state.chartInstance.zoomIn();
     }
@@ -165,6 +167,7 @@ export const useChartStore = create<ChartStore>((set, get) => ({
   zoomOut: () => {
     // Zoom out by 0.8x
     const state = get();
+    console.log('Store zoomOut called, chartInstance:', state.chartInstance);
     if (state.chartInstance && state.chartInstance.zoomOut) {
       state.chartInstance.zoomOut();
     }

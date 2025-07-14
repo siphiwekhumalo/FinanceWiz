@@ -61,7 +61,10 @@ export function ChartZoomControls() {
       <Button
         variant="ghost"
         size="sm"
-        onClick={zoomIn}
+        onClick={() => {
+          console.log('Zoom In button clicked');
+          zoomIn();
+        }}
         className="px-2 py-1 h-8"
         title="Zoom In (Ctrl/Cmd + Wheel Up)"
         disabled={isDragging}
@@ -72,7 +75,10 @@ export function ChartZoomControls() {
       <Button
         variant="ghost"
         size="sm"
-        onClick={zoomOut}
+        onClick={() => {
+          console.log('Zoom Out button clicked');
+          zoomOut();
+        }}
         className="px-2 py-1 h-8"
         title="Zoom Out (Ctrl/Cmd + Wheel Down)"
         disabled={isDragging}
@@ -83,7 +89,10 @@ export function ChartZoomControls() {
       <Button
         variant="ghost"
         size="sm"
-        onClick={resetZoom}
+        onClick={() => {
+          console.log('Reset Zoom button clicked');
+          resetZoom();
+        }}
         className="px-2 py-1 h-8"
         title="Reset Zoom"
         disabled={isDragging}

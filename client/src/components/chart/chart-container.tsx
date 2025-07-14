@@ -1200,15 +1200,21 @@ export function ChartContainer() {
 
     // Enhanced mouse event handlers for smooth scrolling and zooming
     const handleWheel = (e: WheelEvent) => {
-      // Always allow wheel events for chart navigation
+      // Always prevent default and stop propagation for chart navigation
       e.preventDefault();
+      e.stopPropagation();
+      
       const data = chartDataRef.current;
       if (data.length === 0) return;
+      
+      console.log('Wheel event:', { deltaY: e.deltaY, ctrlKey: e.ctrlKey, metaKey: e.metaKey });
       
       // Handle zoom with Ctrl/Cmd key
       if (e.ctrlKey || e.metaKey) {
         const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+        const oldZoom = zoomLevelRef.current;
         zoomLevelRef.current = Math.max(0.1, Math.min(5, zoomLevelRef.current * zoomFactor));
+        console.log('Zoom changed from', oldZoom, 'to', zoomLevelRef.current);
       } else {
         // Handle horizontal scrolling
         const baseVisibleCount = Math.max(20, Math.floor((container.offsetWidth - 120) / 8));
@@ -1217,7 +1223,9 @@ export function ChartContainer() {
         
         const scrollSpeed = Math.max(2, Math.floor(visibleDataCount * 0.1));
         const deltaX = e.deltaX || e.deltaY;
+        const oldScroll = scrollOffsetRef.current;
         scrollOffsetRef.current = Math.max(0, Math.min(maxScrollOffset, scrollOffsetRef.current + (deltaX > 0 ? scrollSpeed : -scrollSpeed)));
+        console.log('Scroll changed from', oldScroll, 'to', scrollOffsetRef.current);
       }
       
       drawChart(canvas, data);
