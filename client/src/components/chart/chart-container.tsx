@@ -60,9 +60,9 @@ export function ChartContainer() {
     const maxTime = Math.max(...times);
     const timeRange = maxTime - minTime;
 
-    // Draw grid
-    ctx.strokeStyle = '#334155';
-    ctx.lineWidth = 1;
+    // Draw grid (almost invisible)
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = 0.5;
     
     // Horizontal grid lines
     for (let i = 0; i <= 5; i++) {
