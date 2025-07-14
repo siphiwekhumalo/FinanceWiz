@@ -621,21 +621,25 @@ export function ChartContainer() {
       ctx.lineWidth = 2;
       ctx.setLineDash([]);
 
-      // Get comparison data for the same visible range
+      // Get comparison data for the same visible range as main chart
+      // Ensure comparison data aligns exactly with main chart's visible range
       const compVisibleData = compSymbol.data.slice(currentScrollOffset, currentScrollOffset + visibleDataCount);
       
       if (compVisibleData.length === 0) return;
+      
+      // Ensure comparison data length matches main chart visible data
+      const alignedVisibleData = compVisibleData.slice(0, visibleData.length);
 
       ctx.beginPath();
       
       if (config.comparisonMode === 'percentage') {
         // Percentage mode: normalize to percentage change from first visible point
-        const basePrice = compVisibleData[0]?.close || 0;
+        const basePrice = alignedVisibleData[0]?.close || 0;
         const mainBasePrice = visibleData[0]?.close || 0;
         
         if (basePrice === 0 || mainBasePrice === 0) return;
         
-        compVisibleData.forEach((point, index) => {
+        alignedVisibleData.forEach((point, index) => {
           // Calculate percentage change
           const compPercentChange = ((point.close - basePrice) / basePrice) * 100;
           
@@ -643,7 +647,8 @@ export function ChartContainer() {
           const percentageRange = 20;
           const normalizedY = Math.max(0, Math.min(1, (compPercentChange + percentageRange) / (2 * percentageRange)));
           
-          const x = padding + (index * chartWidth) / (visibleData.length - 1);
+          // Use main chart's visible data length for consistent X positioning
+          const x = padding + (index * chartWidth) / Math.max(1, visibleData.length - 1);
           const y = padding + chartHeight - (normalizedY * chartHeight);
           
           if (index === 0) {
@@ -655,8 +660,9 @@ export function ChartContainer() {
       } else {
         // Absolute mode: plot comparison symbols on the same price scale as main chart
         // This is how professional trading platforms display comparison symbols
-        compVisibleData.forEach((point, index) => {
-          const x = padding + (index * chartWidth) / Math.max(1, compVisibleData.length - 1);
+        alignedVisibleData.forEach((point, index) => {
+          // Use main chart's visible data length for consistent X positioning
+          const x = padding + (index * chartWidth) / Math.max(1, visibleData.length - 1);
           
           // Map comparison symbol price directly to main chart's price axis
           // This allows comparison symbols to show actual price relationships
@@ -683,22 +689,23 @@ export function ChartContainer() {
         
         // Redraw the line on top
         ctx.beginPath();
-        compVisibleData.forEach((point, index) => {
+        alignedVisibleData.forEach((point, index) => {
           let x, y;
           
           if (config.comparisonMode === 'percentage') {
-            const basePrice = compVisibleData[0]?.close || 0;
+            const basePrice = alignedVisibleData[0]?.close || 0;
             if (basePrice === 0) return;
             
             const compPercentChange = ((point.close - basePrice) / basePrice) * 100;
             const percentageRange = 20;
             const normalizedY = Math.max(0, Math.min(1, (compPercentChange + percentageRange) / (2 * percentageRange)));
             
-            x = padding + (index * chartWidth) / Math.max(1, compVisibleData.length - 1);
+            // Use main chart's visible data length for consistent positioning
+            x = padding + (index * chartWidth) / Math.max(1, visibleData.length - 1);
             y = padding + chartHeight - (normalizedY * chartHeight);
           } else {
             // Absolute mode: use main chart's price scale for comparison symbols
-            x = padding + (index * chartWidth) / Math.max(1, compVisibleData.length - 1);
+            x = padding + (index * chartWidth) / Math.max(1, visibleData.length - 1);
             y = padding + ((maxPrice - point.close) / priceRange) * chartHeight;
           }
           
