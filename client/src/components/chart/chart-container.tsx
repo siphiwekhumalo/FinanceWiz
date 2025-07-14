@@ -1437,7 +1437,14 @@ export function ChartContainer() {
     };
 
     // Add event listeners with proper focus handling
-    canvas.addEventListener('wheel', handleWheel, { passive: false });
+    console.log('Adding wheel event listener to canvas:', canvas);
+    
+    const wheelListener = (e: WheelEvent) => {
+      console.log('Native wheel event triggered:', e);
+      handleWheel(e);
+    };
+    
+    canvas.addEventListener('wheel', wheelListener, { passive: false });
     canvas.addEventListener('mousedown', handleMouseDownNative);
     canvas.addEventListener('mousemove', handleMouseMoveNative);
     canvas.addEventListener('mouseup', handleMouseUpNative);
@@ -1450,6 +1457,7 @@ export function ChartContainer() {
     
     // Add click listener to ensure canvas gets focus
     canvas.addEventListener('click', () => {
+      console.log('Canvas clicked - focusing');
       canvas.focus();
     });
     
@@ -1605,7 +1613,45 @@ export function ChartContainer() {
       </motion.div>
 
       {/* Chart Canvas - Always Display */}
-      <div ref={containerRef} id="chart-container" className="w-full h-full bg-slate-900 relative overflow-hidden">
+      <div 
+        ref={containerRef} 
+        id="chart-container" 
+        className="w-full h-full bg-slate-900 relative overflow-hidden"
+        onWheel={(e) => {
+          console.log('Container wheel event:', e);
+          e.preventDefault();
+          
+          const data = chartDataRef.current;
+          if (data.length === 0) return;
+          
+          // Handle zoom with Ctrl/Cmd key
+          if (e.ctrlKey || e.metaKey) {
+            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+            const oldZoom = zoomLevelRef.current;
+            zoomLevelRef.current = Math.max(0.1, Math.min(5, zoomLevelRef.current * zoomFactor));
+            console.log('Container zoom changed from', oldZoom, 'to', zoomLevelRef.current);
+            
+            if (canvasRef.current) {
+              drawChart(canvasRef.current, data);
+            }
+          } else {
+            // Handle horizontal scrolling
+            const baseVisibleCount = Math.max(20, Math.floor(((containerRef.current?.offsetWidth || 400) - 120) / 8));
+            const visibleDataCount = Math.max(15, Math.floor(baseVisibleCount / zoomLevelRef.current));
+            const maxScrollOffset = Math.max(0, data.length - visibleDataCount);
+            
+            const scrollSpeed = Math.max(2, Math.floor(visibleDataCount * 0.1));
+            const deltaX = e.deltaX || e.deltaY;
+            const oldScroll = scrollOffsetRef.current;
+            scrollOffsetRef.current = Math.max(0, Math.min(maxScrollOffset, scrollOffsetRef.current + (deltaX > 0 ? scrollSpeed : -scrollSpeed)));
+            console.log('Container scroll changed from', oldScroll, 'to', scrollOffsetRef.current);
+            
+            if (canvasRef.current) {
+              drawChart(canvasRef.current, data);
+            }
+          }
+        }}
+      >
         <canvas
           ref={canvasRef}
           className={`w-full h-full focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded-sm relative z-0 ${
