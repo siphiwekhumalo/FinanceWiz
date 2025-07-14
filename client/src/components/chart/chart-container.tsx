@@ -209,13 +209,18 @@ export function ChartContainer() {
     const chartCoords = canvasToChartCoords(x, y, chartDataRef.current);
     if (!chartCoords) return;
 
+    // Always prevent default behavior when in drawing mode
+    if (isInDrawMode || config.selectedTool !== 'cursor') {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
     // Check if clicking on an endpoint for editing
     const endpoint = getEndpointAtPosition(x, y);
     if (endpoint && config.selectedTool === 'cursor') {
       setSelectedObjectId(endpoint.objectId);
       setIsDraggingEndpoint(true);
       setDragPointIndex(endpoint.pointIndex);
-      e.preventDefault();
       return;
     }
 
@@ -270,8 +275,7 @@ export function ChartContainer() {
 
     setCurrentDrawingObject(newDrawingObject);
     setIsDrawing(true);
-    e.preventDefault(); // Prevent scrolling while drawing
-  }, [config.selectedTool, canvasToChartCoords, getEndpointAtPosition]);
+  }, [config.selectedTool, canvasToChartCoords, getEndpointAtPosition, isInDrawMode]);
 
   // Handle mouse move for drawing, editing, and hover effects
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -285,6 +289,12 @@ export function ChartContainer() {
     const chartCoords = canvasToChartCoords(x, y, chartDataRef.current);
     if (!chartCoords) return;
 
+    // Prevent any default behavior when in drawing mode
+    if (isInDrawMode || config.selectedTool !== 'cursor') {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
     // Handle endpoint dragging
     if (isDraggingEndpoint && selectedObjectId) {
       updateDrawingObject(selectedObjectId, {
@@ -294,7 +304,6 @@ export function ChartContainer() {
             index === dragPointIndex ? chartCoords : point
           ) || []
       });
-      e.preventDefault();
       return;
     }
 
@@ -308,7 +317,6 @@ export function ChartContainer() {
       };
 
       setCurrentDrawingObject(updatedObject);
-      e.preventDefault();
       return;
     }
 
