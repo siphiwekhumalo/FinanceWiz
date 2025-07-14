@@ -34,6 +34,7 @@ export function ChartContainer() {
   const [previewPoint, setPreviewPoint] = useState<{ x: number; y: number; price: number; time: number } | null>(null);
   const [isInDrawMode, setIsInDrawMode] = useState(false);
   const [crosshairPosition, setCrosshairPosition] = useState<{ x: number; y: number; price: number; time: number } | null>(null);
+  const crosshairPositionRef = useRef<{ x: number; y: number; price: number; time: number } | null>(null);
   const chartService = ChartService.getInstance();
 
   const getCurrentTime = () => {
@@ -524,7 +525,8 @@ export function ChartContainer() {
 
   // Draw crosshair lines
   const drawCrosshair = useCallback((ctx: CanvasRenderingContext2D, data: ChartDataPoint[]) => {
-    if (!config.showCrosshair || !crosshairPosition) return;
+    const crosshair = crosshairPositionRef.current;
+    if (!config.showCrosshair || !crosshair) return;
 
     const canvas = ctx.canvas;
     const { width, height } = canvas;
@@ -532,7 +534,7 @@ export function ChartContainer() {
     const chartWidth = width - padding * 2;
     const chartHeight = height - padding * 2;
 
-    const canvasPoint = chartToCanvasCoords(crosshairPosition.price, crosshairPosition.time, data);
+    const canvasPoint = chartToCanvasCoords(crosshair.price, crosshair.time, data);
     if (!canvasPoint) return;
 
     ctx.save();
@@ -560,7 +562,7 @@ export function ChartContainer() {
     ctx.lineWidth = 1;
 
     // Price label on Y-axis
-    const priceText = crosshairPosition.price.toFixed(2);
+    const priceText = crosshair.price.toFixed(2);
     ctx.font = '12px monospace';
     const priceTextWidth = ctx.measureText(priceText).width;
     const priceLabelX = width - padding + 2;
@@ -572,7 +574,7 @@ export function ChartContainer() {
     ctx.fillText(priceText, priceLabelX + 4, priceLabelY + 4);
 
     // Time label on X-axis
-    const timeText = new Date(crosshairPosition.time * 1000).toLocaleTimeString([], { 
+    const timeText = new Date(crosshair.time * 1000).toLocaleTimeString([], { 
       hour: '2-digit', 
       minute: '2-digit' 
     });
@@ -587,7 +589,7 @@ export function ChartContainer() {
     ctx.fillText(timeText, timeLabelX + 4, timeLabelY + 12);
 
     ctx.restore();
-  }, [config.showCrosshair, crosshairPosition, chartToCanvasCoords]);
+  }, [config.showCrosshair, chartToCanvasCoords]);
 
   // Draw comparison symbols
   const drawComparisonSymbols = useCallback((ctx: CanvasRenderingContext2D, data: ChartDataPoint[]) => {
@@ -1246,7 +1248,11 @@ export function ChartContainer() {
 
     // Handle mouse leave to clear crosshair
     const handleMouseLeave = () => {
+      crosshairPositionRef.current = null;
       setCrosshairPosition(null);
+      if (canvas) {
+        drawChart(canvas, chartDataRef.current);
+      }
     };
 
     // Handle mouse move for crosshair (only when cursor tool is active)
@@ -1259,7 +1265,12 @@ export function ChartContainer() {
       
       const chartCoords = canvasToChartCoords(x, y, chartDataRef.current);
       if (chartCoords && config.showCrosshair) {
-        setCrosshairPosition(chartCoords);
+        crosshairPositionRef.current = chartCoords;
+        // Immediately redraw just the crosshair without triggering React re-render
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          drawChart(canvas, chartDataRef.current);
+        }
       }
     };
 
