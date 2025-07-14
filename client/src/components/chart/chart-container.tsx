@@ -867,6 +867,16 @@ export function ChartContainer() {
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, width, height);
 
+    // Calculate visible data range with scroll offset and zoom first
+    const baseVisibleCount = Math.max(20, Math.floor(chartWidth / 8));
+    const zoomedVisibleCount = Math.max(15, Math.floor(baseVisibleCount / zoomLevelRef.current));
+    const visibleDataCount = Math.min(data.length, zoomedVisibleCount);
+    const maxScrollOffset = Math.max(0, data.length - visibleDataCount);
+    
+    // Ensure scroll offset stays within bounds
+    scrollOffsetRef.current = Math.max(0, Math.min(scrollOffsetRef.current, maxScrollOffset));
+    const currentScrollOffset = scrollOffsetRef.current;
+
     // Calculate price and time ranges including comparison symbols
     const prices = data.flatMap(d => [d.open, d.high, d.low, d.close]);
     let allPrices = [...prices];
@@ -933,16 +943,6 @@ export function ChartContainer() {
       
       ctx.fillText(formattedPrice, width - padding + 5, y + 4);
     }
-
-    // Calculate visible data range with scroll offset and zoom
-    const baseVisibleCount = Math.max(20, Math.floor(chartWidth / 8));
-    const zoomedVisibleCount = Math.max(15, Math.floor(baseVisibleCount / zoomLevelRef.current));
-    const visibleDataCount = Math.min(data.length, zoomedVisibleCount);
-    const maxScrollOffset = Math.max(0, data.length - visibleDataCount);
-    
-    // Ensure scroll offset stays within bounds
-    scrollOffsetRef.current = Math.max(0, Math.min(scrollOffsetRef.current, maxScrollOffset));
-    const currentScrollOffset = scrollOffsetRef.current;
     const visibleData = data.slice(currentScrollOffset, currentScrollOffset + visibleDataCount);
 
     // Draw time axis labels (X-axis) with proper date formatting for large datasets

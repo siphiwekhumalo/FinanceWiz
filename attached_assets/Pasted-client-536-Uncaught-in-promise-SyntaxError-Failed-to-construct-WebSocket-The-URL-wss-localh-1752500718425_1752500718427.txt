@@ -1,0 +1,72 @@
+client:536 Uncaught (in promise) SyntaxError: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/?token=fuJq6GGAyDvL' is invalid.
+    at setupWebSocket (client:536:19)
+    at fallback (client:509:16)
+    at WebSocket.<anonymous> (client:555:7)Understand this error
+hook.js:608 Error loading chart data: ReferenceError: Cannot access 'currentScrollOffset' before initialization
+    at chart-container.tsx:877:55
+    at Array.forEach (<anonymous>)
+    at chart-container.tsx:875:30
+    at loadData (chart-container.tsx:1390:9)
+    at chart-container.tsx:1396:5
+    at commitHookEffectListMount (chunk-WERSD76P.js?v=f1931c86:16915:34)
+    at commitPassiveMountOnFiber (chunk-WERSD76P.js?v=f1931c86:18156:19)
+    at commitPassiveMountEffects_complete (chunk-WERSD76P.js?v=f1931c86:18129:17)
+    at commitPassiveMountEffects_begin (chunk-WERSD76P.js?v=f1931c86:18119:15)
+    at commitPassiveMountEffects (chunk-WERSD76P.js?v=f1931c86:18109:11) Error Component Stack
+    at ChartContainer (chart-container.tsx:11:140)
+    at div (<anonymous>)
+    at main (<anonymous>)
+    at div (<anonymous>)
+    at div (<anonymous>)
+    at ChartDashboard (chart-dashboard.tsx:14:33)
+    at Route (wouter.js?v=f1931c86:323:16)
+    at Switch (wouter.js?v=f1931c86:379:17)
+    at Router (<anonymous>)
+    at div (<anonymous>)
+    at Provider (chunk-MAE4WKEQ.js?v=f1931c86:38:15)
+    at TooltipProvider (@radix-ui_react-tooltip.js?v=f1931c86:59:5)
+    at QueryClientProvider (@tanstack_react-query.js?v=f1931c86:2805:3)
+    at App (<anonymous>)
+overrideMethod @ hook.js:608Understand this error
+chunk-WERSD76P.js?v=f1931c86:16670 Uncaught ReferenceError: Cannot access 'currentScrollOffset' before initialization
+    at chart-container.tsx:877:55
+    at Array.forEach (<anonymous>)
+    at chart-container.tsx:875:30
+    at chart-container.tsx:1414:7
+    at commitHookEffectListMount (chunk-WERSD76P.js?v=f1931c86:16915:34)
+    at commitPassiveMountOnFiber (chunk-WERSD76P.js?v=f1931c86:18156:19)
+    at commitPassiveMountEffects_complete (chunk-WERSD76P.js?v=f1931c86:18129:17)
+    at commitPassiveMountEffects_begin (chunk-WERSD76P.js?v=f1931c86:18119:15)
+    at commitPassiveMountEffects (chunk-WERSD76P.js?v=f1931c86:18109:11)
+    at flushPassiveEffectsImpl (chunk-WERSD76P.js?v=f1931c86:19490:11)Understand this error
+hook.js:608 The above error occurred in the <ChartContainer> component:
+
+    at ChartContainer (https://35f52a4b-653f-42c8-9d95-7349ffd41cf6-00-iadjqo4g8bn9.spock.replit.dev/src/components/chart/chart-container.tsx:27:140)
+    at div
+    at main
+    at div
+    at div
+    at ChartDashboard (https://35f52a4b-653f-42c8-9d95-7349ffd41cf6-00-iadjqo4g8bn9.spock.replit.dev/src/pages/chart-dashboard.tsx:31:33)
+    at Route (https://35f52a4b-653f-42c8-9d95-7349ffd41cf6-00-iadjqo4g8bn9.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=f1931c86:323:16)
+    at Switch (https://35f52a4b-653f-42c8-9d95-7349ffd41cf6-00-iadjqo4g8bn9.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=f1931c86:379:17)
+    at Router
+    at div
+    at Provider (https://35f52a4b-653f-42c8-9d95-7349ffd41cf6-00-iadjqo4g8bn9.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-MAE4WKEQ.js?v=f1931c86:38:15)
+    at TooltipProvider (https://35f52a4b-653f-42c8-9d95-7349ffd41cf6-00-iadjqo4g8bn9.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=f1931c86:59:5)
+    at QueryClientProvider (https://35f52a4b-653f-42c8-9d95-7349ffd41cf6-00-iadjqo4g8bn9.spock.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=f1931c86:2805:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+overrideMethod @ hook.js:608Understand this error
+chunk-WERSD76P.js?v=f1931c86:9129 Uncaught ReferenceError: Cannot access 'currentScrollOffset' before initialization
+    at chart-container.tsx:877:55
+    at Array.forEach (<anonymous>)
+    at chart-container.tsx:875:30
+    at chart-container.tsx:1414:7
+    at commitHookEffectListMount (chunk-WERSD76P.js?v=f1931c86:16915:34)
+    at commitPassiveMountOnFiber (chunk-WERSD76P.js?v=f1931c86:18156:19)
+    at commitPassiveMountEffects_complete (chunk-WERSD76P.js?v=f1931c86:18129:17)
+    at commitPassiveMountEffects_begin (chunk-WERSD76P.js?v=f1931c86:18119:15)
+    at commitPassiveMountEffects (chunk-WERSD76P.js?v=f1931c86:18109:11)
+    at flushPassiveEffectsImpl (chunk-WERSD76P.js?v=f1931c86:19490:11)Understand this error
