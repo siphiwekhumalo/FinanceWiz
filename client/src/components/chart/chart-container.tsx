@@ -666,12 +666,12 @@ export function ChartContainer() {
           ctx.lineTo(padding + chartWidth, y);
         } else {
           compVisibleData.forEach((point, index) => {
-            const x = padding + (index * chartWidth) / (visibleData.length - 1);
+            const x = padding + (index * chartWidth) / Math.max(1, compVisibleData.length - 1);
             
-            // Normalize comparison price to 0-1 range, then map to main chart range
-            const normalizedPrice = (point.close - compMinPrice) / compPriceRange;
-            const scaledPrice = minPrice + (normalizedPrice * priceRange);
-            const y = padding + ((maxPrice - scaledPrice) / priceRange) * chartHeight;
+            // Scale comparison symbol to fit the main chart's price range more naturally
+            // Use the same Y coordinate system as the main chart
+            const compNormalizedPrice = (point.close - compMinPrice) / compPriceRange;
+            const y = padding + (1 - compNormalizedPrice) * chartHeight;
             
             if (index === 0) {
               ctx.moveTo(x, y);
@@ -706,7 +706,7 @@ export function ChartContainer() {
             const percentageRange = 20;
             const normalizedY = Math.max(0, Math.min(1, (compPercentChange + percentageRange) / (2 * percentageRange)));
             
-            x = padding + (index * chartWidth) / (visibleData.length - 1);
+            x = padding + (index * chartWidth) / Math.max(1, compVisibleData.length - 1);
             y = padding + chartHeight - (normalizedY * chartHeight);
           } else {
             const compPrices = compVisibleData.map(d => d.close);
@@ -717,12 +717,11 @@ export function ChartContainer() {
             if (compPriceRange === 0) {
               y = padding + chartHeight / 2;
             } else {
-              const normalizedPrice = (point.close - compMinPrice) / compPriceRange;
-              const scaledPrice = minPrice + (normalizedPrice * priceRange);
-              y = padding + ((maxPrice - scaledPrice) / priceRange) * chartHeight;
+              const compNormalizedPrice = (point.close - compMinPrice) / compPriceRange;
+              y = padding + (1 - compNormalizedPrice) * chartHeight;
             }
             
-            x = padding + (index * chartWidth) / (visibleData.length - 1);
+            x = padding + (index * chartWidth) / Math.max(1, compVisibleData.length - 1);
           }
           
           if (index === 0) {
