@@ -290,8 +290,8 @@ export function ChartContainer() {
     const chartCoords = canvasToChartCoords(x, y, chartDataRef.current);
     if (!chartCoords) return;
 
-    // Prevent any default behavior when in drawing mode
-    if (isInDrawMode || config.selectedTool !== 'cursor') {
+    // Prevent any default behavior when in drawing mode (not cursor mode)
+    if (isInDrawMode && config.selectedTool !== 'cursor') {
       e.preventDefault();
       e.stopPropagation();
     }
@@ -326,8 +326,8 @@ export function ChartContainer() {
       setPreviewPoint(chartCoords);
     }
 
-    // Update crosshair position when enabled
-    if (config.showCrosshair && !isDrawing && !isDraggingEndpoint) {
+    // Update crosshair position when enabled and not dragging
+    if (config.showCrosshair && !isDrawing && !isDraggingEndpoint && !isDraggingRef.current) {
       setCrosshairPosition(chartCoords);
     }
 
@@ -588,6 +588,70 @@ export function ChartContainer() {
 
     ctx.restore();
   }, [config.showCrosshair, crosshairPosition, chartToCanvasCoords]);
+
+  // Draw comparison symbols
+  const drawComparisonSymbols = useCallback((ctx: CanvasRenderingContext2D, data: ChartDataPoint[]) => {
+    if (!config.comparisonSymbols.length) return;
+
+    const canvas = ctx.canvas;
+    const { width, height } = canvas;
+    const padding = 40;
+    const chartWidth = width - padding * 2;
+    const chartHeight = height - padding * 2;
+
+    const visibleDataCount = Math.max(15, Math.floor(chartWidth / 8 / zoomLevelRef.current));
+    const startIndex = Math.max(0, scrollOffsetRef.current);
+    const endIndex = Math.min(data.length, startIndex + visibleDataCount);
+    
+    if (endIndex <= startIndex) return;
+
+    const visibleData = data.slice(startIndex, endIndex);
+    const xStep = chartWidth / Math.max(1, visibleData.length - 1);
+
+    // Get price range for main symbol
+    const mainPrices = visibleData.map(d => [d.open, d.high, d.low, d.close]).flat();
+    const mainMinPrice = Math.min(...mainPrices);
+    const mainMaxPrice = Math.max(...mainPrices);
+    const mainPriceRange = mainMaxPrice - mainMinPrice;
+
+    config.comparisonSymbols.forEach(compSymbol => {
+      if (!compSymbol.enabled) return;
+
+      ctx.save();
+      ctx.strokeStyle = compSymbol.color;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([]);
+
+      const compVisibleData = compSymbol.data.slice(startIndex, endIndex);
+      
+      // Normalize comparison data to main symbol's price range
+      const compPrices = compVisibleData.map(d => d.close);
+      const compMinPrice = Math.min(...compPrices);
+      const compMaxPrice = Math.max(...compPrices);
+      const compPriceRange = compMaxPrice - compMinPrice;
+
+      if (compPriceRange === 0) return;
+
+      ctx.beginPath();
+      
+      compVisibleData.forEach((point, index) => {
+        // Normalize the comparison price to the main symbol's range
+        const normalizedPrice = mainMinPrice + ((point.close - compMinPrice) / compPriceRange) * mainPriceRange;
+        
+        const x = padding + index * xStep;
+        const y = padding + chartHeight - ((normalizedPrice - mainMinPrice) / mainPriceRange) * chartHeight;
+        
+        if (index === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      });
+
+      ctx.stroke();
+      ctx.restore();
+    });
+  }, [config.comparisonSymbols]);
 
   // Draw draggable endpoints
   const drawEndpoints = useCallback((ctx: CanvasRenderingContext2D, obj: DrawingObject, data: ChartDataPoint[], isSelected: boolean) => {
@@ -978,6 +1042,9 @@ export function ChartContainer() {
     // Draw drawing objects
     drawDrawingObjects(ctx, data);
 
+    // Draw comparison symbols
+    drawComparisonSymbols(ctx, data);
+
     // Draw crosshair
     drawCrosshair(ctx, data);
 
@@ -998,7 +1065,7 @@ export function ChartContainer() {
       ctx.fillStyle = '#64748b';
       ctx.fillRect(thumbX, scrollbarY, thumbWidth, scrollbarHeight);
     }
-  }, [config.chartType, config.showVolume, drawDrawingObjects, drawCrosshair]);
+  }, [config.chartType, config.showVolume, drawDrawingObjects, drawCrosshair, drawComparisonSymbols]);
 
   // Initialize canvas and load data
   useEffect(() => {

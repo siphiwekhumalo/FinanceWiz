@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { ChartConfig, ChartType, Timeframe, DataSource, DrawingTool, TechnicalIndicator, SymbolData, ChartDataPoint, VolumeDataPoint } from '@/types/chart-types';
+import { ChartConfig, ChartType, Timeframe, DataSource, DrawingTool, TechnicalIndicator, SymbolData, ChartDataPoint, VolumeDataPoint, ComparisonSymbol } from '@/types/chart-types';
 
 interface ChartStore {
   config: ChartConfig;
@@ -41,6 +41,12 @@ interface ChartStore {
   updateDrawingObject: (id: string, updates: Partial<DrawingObject>) => void;
   removeDrawingObject: (id: string) => void;
   clearDrawingObjects: () => void;
+  
+  // Comparison actions
+  addComparisonSymbol: (symbol: ComparisonSymbol) => void;
+  removeComparisonSymbol: (symbol: string) => void;
+  toggleComparisonSymbol: (symbol: string) => void;
+  clearComparisonSymbols: () => void;
 }
 
 const defaultConfig: ChartConfig = {
@@ -53,6 +59,7 @@ const defaultConfig: ChartConfig = {
   showVolume: true,
   showCrosshair: true,
   drawingObjects: [],
+  comparisonSymbols: [],
 };
 
 export const useChartStore = create<ChartStore>((set, get) => ({
@@ -171,5 +178,33 @@ export const useChartStore = create<ChartStore>((set, get) => ({
       ...state.config,
       drawingObjects: [],
     },
+  })),
+  
+  // Comparison actions
+  addComparisonSymbol: (symbol) => set((state) => ({
+    config: { 
+      ...state.config, 
+      comparisonSymbols: [...state.config.comparisonSymbols, symbol]
+    }
+  })),
+  
+  removeComparisonSymbol: (symbol) => set((state) => ({
+    config: { 
+      ...state.config, 
+      comparisonSymbols: state.config.comparisonSymbols.filter(s => s.symbol !== symbol)
+    }
+  })),
+  
+  toggleComparisonSymbol: (symbol) => set((state) => ({
+    config: { 
+      ...state.config, 
+      comparisonSymbols: state.config.comparisonSymbols.map(s => 
+        s.symbol === symbol ? { ...s, enabled: !s.enabled } : s
+      )
+    }
+  })),
+  
+  clearComparisonSymbols: () => set((state) => ({
+    config: { ...state.config, comparisonSymbols: [] }
   })),
 }));

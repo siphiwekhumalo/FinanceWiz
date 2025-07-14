@@ -8,6 +8,7 @@ import { IndicatorsDropdown } from './indicators-dropdown';
 import { DrawingToolsDropdown } from './drawing-tools-dropdown';
 import { SymbolDropdown } from './symbol-dropdown';
 import { DataSourceToggle } from './data-source-toggle';
+import { ComparisonDropdown } from './comparison-dropdown';
 
 export function ChartToolbar() {
   const { toggleVolume, toggleCrosshair, resetZoom, config } = useChartStore();
@@ -32,6 +33,10 @@ export function ChartToolbar() {
         <IndicatorsDropdown />
         
         <DrawingToolsDropdown />
+        
+        <div className="w-px h-4 bg-slate-600" />
+        
+        <ComparisonDropdown />
         
         <div className="w-px h-4 bg-slate-600" />
         

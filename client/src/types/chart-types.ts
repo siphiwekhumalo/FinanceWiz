@@ -7,6 +7,14 @@ export interface ChartDataPoint {
   volume: number;
 }
 
+export interface ComparisonSymbol {
+  symbol: string;
+  name: string;
+  data: ChartDataPoint[];
+  color: string;
+  enabled: boolean;
+}
+
 export interface VolumeDataPoint {
   time: number;
   value: number;
@@ -93,6 +101,7 @@ export interface ChartConfig {
   showVolume: boolean;
   showCrosshair: boolean;
   drawingObjects: DrawingObject[];
+  comparisonSymbols: ComparisonSymbol[];
 }
 
 export interface PriceUpdate {
