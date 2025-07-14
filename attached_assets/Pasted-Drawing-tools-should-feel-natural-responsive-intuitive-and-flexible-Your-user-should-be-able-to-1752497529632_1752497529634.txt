@@ -1,0 +1,119 @@
+Drawing tools should feel natural, responsive, intuitive, and flexible.
+
+Your user should be able to:
+
+Click → Draw → Adjust → Delete — in seconds.
+
+Feel like the chart is an extension of their hand.
+
+🧩 CORE UX FLOW FOR DRAWING TOOLS
+1. Activate Tool
+User clicks on a drawing tool icon (e.g., 📝 Trendline).
+
+Cursor changes to crosshair or pencil icon.
+
+Chart enters draw mode (no panning, zooming).
+
+2. Draw Tool
+Click once to start (anchor point 1).
+
+Move mouse to see a preview.
+
+Click again to place anchor point 2.
+
+For zones (rectangles, fibs): start + drag to draw bounding box.
+
+3. Edit Tool
+Click and drag endpoints or bounding boxes.
+
+Show handles (circles) on hover.
+
+Snap to candle open/high/low/close (optional, configurable).
+
+4. Context Menu
+Right-click or tap-and-hold tool to open:
+
+Delete
+
+Style (color, opacity, thickness)
+
+Lock (disable edit)
+
+Show/hide
+
+5. Exit Draw Mode
+Press ESC, or click the "select" tool (default mode).
+
+Allow multiple tools to be active on a chart simultaneously.
+
+🧠 UX Best Practices
+Feature	UX Behavior
+Undo/Redo	Cmd/Ctrl + Z / Y to undo drawings
+Snap to price/time	Option to auto-snap anchors to nearest OHLC
+Magnet tool	Toggle to attach lines to candle wicks
+Cursor feedback	Crosshair = draw mode, Arrow = default
+Hover highlight	Highlight tool when mouse passes over
+Delete	Press Delete key or right-click menu
+Multi-select	Shift + Click to select multiple tools
+Drag-select	Click-drag to select multiple drawings in a box
+Draw anywhere	Should work across time axis and price axis boundaries
+
+🎨 UI Design Components
+Component	Description
+Floating toolbar	Top or side dock with tool icons: ✏️ ➖ 🔺 📐 🔄 ❌
+Smart handles	Resize points with hover interaction
+Properties panel	Color, thickness, opacity, label text
+Layer manager (advanced)	List of all drawings to toggle/edit visibility
+Mini context menu	Right-click or 3-dot menu on tools
+Crosshair snap lines	Visuals to help anchor tools precisely
+
+🛠️ Technical Implementation Tips
+Area	Tool	Description
+Drawing Layer	Konva.js or custom Canvas	Use for interactive objects
+State Mgmt	Zustand / Redux	Manage active tool, selected shape
+Coordinate Map	Time/price ↔ pixel mapping	Map UI points to chart data points
+Collision Detection	Mouse position vs object bounds	For hover/edit states
+Persistence	LocalStorage / backend	Save tools per layout/user
+Undo Stack	Immer or manual stack	Track add/move/delete operations
+
+🔄 Example Drawing State Flow (Zustand)
+ts
+Copy
+Edit
+{
+  activeTool: "trendline", // or "select", "fib", etc.
+  drawings: [
+    { id: 'abc', type: 'trendline', p1: {x,y}, p2: {x,y}, style: {...} }
+  ],
+  isDrawing: true,
+  selectedId: 'abc',
+  hoveredId: 'def'
+}
+💡 UX Enhancements
+Feature	Description
+✨ Hover glow	Light border or glow when tool is hovered
+⌨️ Keyboard support	ESC to cancel, Del to remove
+🎨 Style presets	Choose default styles for tools
+📌 Lock tool	Prevent accidental edits
+🧠 Smart labeling	Auto-place text for Fib levels, trendlines, etc.
+🕹️ Joystick mode	For drawing on mobile: tap → draw handles appear
+
+📱 Mobile Consideration
+UX Challenge	Solution
+No hover	Use long-press or tap cycles
+Fat finger drawing	Provide zoomed-in “draw window” preview
+Smaller toolbar	Use icon-only floating bar with scroll
+No right-click	Add 3-dot “...” menu per tool for edit/delete
+
+🎯 Summary
+Drawing tools are where users "live" on your chart.
+They must:
+
+Be smooth and predictable
+
+Respect user intention
+
+Work on all screen sizes
+
+Support edit/delete/reset quickly
+

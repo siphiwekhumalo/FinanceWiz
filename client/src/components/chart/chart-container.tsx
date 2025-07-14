@@ -28,13 +28,18 @@ export function ChartContainer() {
   const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
   const [isDraggingEndpoint, setIsDraggingEndpoint] = useState(false);
   const [dragPointIndex, setDragPointIndex] = useState<number>(-1);
+  const [hoveredObjectId, setHoveredObjectId] = useState<string | null>(null);
+  const [showContextMenu, setShowContextMenu] = useState(false);
+  const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
+  const [previewPoint, setPreviewPoint] = useState<{ x: number; y: number; price: number; time: number } | null>(null);
+  const [isInDrawMode, setIsInDrawMode] = useState(false);
   const chartService = ChartService.getInstance();
 
   const getCurrentTime = () => {
     return new Date().toLocaleTimeString();
   };
 
-  // Handle keyboard events for deleting selected objects
+  // Handle keyboard events for deleting selected objects and ESC to exit draw mode
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -43,12 +48,31 @@ export function ChartContainer() {
           removeDrawingObject(selectedObjectId);
           setSelectedObjectId(null);
         }
+      } else if (e.key === 'Escape') {
+        // Exit draw mode and cancel current drawing
+        setIsInDrawMode(false);
+        setCurrentDrawingObject(null);
+        setIsDrawing(false);
+        setSelectedObjectId(null);
+        setShowContextMenu(false);
+        setPreviewPoint(null);
+      } else if (e.key === 'z' && (e.ctrlKey || e.metaKey)) {
+        // Undo last drawing (basic implementation)
+        if (config.drawingObjects.length > 0) {
+          const lastObject = config.drawingObjects[config.drawingObjects.length - 1];
+          removeDrawingObject(lastObject.id);
+        }
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedObjectId, removeDrawingObject]);
+  }, [selectedObjectId, removeDrawingObject, config.drawingObjects, isInDrawMode]);
+
+  // Automatically enter draw mode when a drawing tool is selected
+  useEffect(() => {
+    setIsInDrawMode(config.selectedTool !== 'cursor');
+  }, [config.selectedTool]);
 
   // Convert canvas coordinates to chart data coordinates
   const canvasToChartCoords = useCallback((canvasX: number, canvasY: number, data: ChartDataPoint[]) => {
@@ -103,6 +127,50 @@ export function ChartContainer() {
       x: padding + (normalizedX * chartWidth),
       y: padding + (normalizedY * chartHeight)
     };
+  }, []);
+
+  // Utility function to calculate distance from point to line
+  const getDistanceToLine = useCallback((px: number, py: number, x1: number, y1: number, x2: number, y2: number): number => {
+    const A = px - x1;
+    const B = py - y1;
+    const C = x2 - x1;
+    const D = y2 - y1;
+
+    const dot = A * C + B * D;
+    const lenSq = C * C + D * D;
+    let param = -1;
+    if (lenSq !== 0) {
+      param = dot / lenSq;
+    }
+
+    let xx, yy;
+    if (param < 0) {
+      xx = x1;
+      yy = y1;
+    } else if (param > 1) {
+      xx = x2;
+      yy = y2;
+    } else {
+      xx = x1 + param * C;
+      yy = y1 + param * D;
+    }
+
+    const dx = px - xx;
+    const dy = py - yy;
+    return Math.sqrt(dx * dx + dy * dy);
+  }, []);
+
+  // Utility function to check if point is near rectangle border
+  const isPointNearRectangle = useCallback((px: number, py: number, rect: { x: number; y: number; width: number; height: number }, tolerance: number): boolean => {
+    const { x, y, width, height } = rect;
+    
+    // Check if point is near any of the four sides
+    const nearLeft = Math.abs(px - x) <= tolerance && py >= y - tolerance && py <= y + height + tolerance;
+    const nearRight = Math.abs(px - (x + width)) <= tolerance && py >= y - tolerance && py <= y + height + tolerance;
+    const nearTop = Math.abs(py - y) <= tolerance && px >= x - tolerance && px <= x + width + tolerance;
+    const nearBottom = Math.abs(py - (y + height)) <= tolerance && px >= x - tolerance && px <= x + width + tolerance;
+    
+    return nearLeft || nearRight || nearTop || nearBottom;
   }, []);
 
   // Check if mouse is over an endpoint for editing
@@ -205,7 +273,7 @@ export function ChartContainer() {
     e.preventDefault(); // Prevent scrolling while drawing
   }, [config.selectedTool, canvasToChartCoords, getEndpointAtPosition]);
 
-  // Handle mouse move for drawing and editing
+  // Handle mouse move for drawing, editing, and hover effects
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -244,12 +312,49 @@ export function ChartContainer() {
       return;
     }
 
-    // Update cursor based on hover state
+    // Handle drawing preview for first point
+    if (isInDrawMode && config.selectedTool !== 'cursor' && !isDrawing) {
+      setPreviewPoint(chartCoords);
+    }
+
+    // Handle hover effects and cursor changes
     if (config.selectedTool === 'cursor') {
       const endpoint = getEndpointAtPosition(x, y);
-      canvas.style.cursor = endpoint ? 'pointer' : 'default';
+      
+      // Find hovered drawing object
+      const hoveredObject = config.drawingObjects.find(obj => {
+        if (obj.type === 'text' && obj.points.length > 0) {
+          const canvasPoint = chartToCanvasCoords(obj.points[0].price, obj.points[0].time, chartDataRef.current);
+          if (canvasPoint) {
+            const distance = Math.sqrt(Math.pow(x - canvasPoint.x, 2) + Math.pow(y - canvasPoint.y, 2));
+            return distance <= 30;
+          }
+        } else if (obj.type === 'trendline' && obj.points.length >= 2) {
+          const start = chartToCanvasCoords(obj.points[0].price, obj.points[0].time, chartDataRef.current);
+          const end = chartToCanvasCoords(obj.points[1].price, obj.points[1].time, chartDataRef.current);
+          if (start && end) {
+            // Check if mouse is near the line
+            const distanceToLine = getDistanceToLine(x, y, start.x, start.y, end.x, end.y);
+            return distanceToLine <= 8; // 8 pixel tolerance
+          }
+        } else if (obj.type === 'rectangle' && obj.points.length >= 2) {
+          const start = chartToCanvasCoords(obj.points[0].price, obj.points[0].time, chartDataRef.current);
+          const end = chartToCanvasCoords(obj.points[1].price, obj.points[1].time, chartDataRef.current);
+          if (start && end) {
+            // Check if mouse is near rectangle border
+            const rect = { x: Math.min(start.x, end.x), y: Math.min(start.y, end.y), width: Math.abs(end.x - start.x), height: Math.abs(end.y - start.y) };
+            return isPointNearRectangle(x, y, rect, 8);
+          }
+        }
+        return false;
+      });
+
+      setHoveredObjectId(hoveredObject?.id || null);
+      canvas.style.cursor = endpoint ? 'pointer' : (hoveredObject ? 'pointer' : 'default');
+    } else if (isInDrawMode) {
+      canvas.style.cursor = 'crosshair';
     }
-  }, [isDrawing, currentDrawingObject, isDraggingEndpoint, selectedObjectId, dragPointIndex, canvasToChartCoords, config.drawingObjects, config.selectedTool, updateDrawingObject, getEndpointAtPosition]);
+  }, [isDrawing, currentDrawingObject, isDraggingEndpoint, selectedObjectId, dragPointIndex, canvasToChartCoords, config.drawingObjects, config.selectedTool, updateDrawingObject, getEndpointAtPosition, isInDrawMode, chartToCanvasCoords]);
 
   // Handle mouse up for drawing and editing
   const handleMouseUp = useCallback(() => {
@@ -274,6 +379,38 @@ export function ChartContainer() {
       return;
     }
   }, [isDrawing, currentDrawingObject, isDraggingEndpoint, addDrawingObject]);
+
+  // Handle right-click context menu
+  const handleContextMenu = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // Check if right-clicking on a drawing object
+    const clickedObject = config.drawingObjects.find(obj => {
+      if (obj.type === 'text' && obj.points.length > 0) {
+        const canvasPoint = chartToCanvasCoords(obj.points[0].price, obj.points[0].time, chartDataRef.current);
+        if (canvasPoint) {
+          const distance = Math.sqrt(Math.pow(x - canvasPoint.x, 2) + Math.pow(y - canvasPoint.y, 2));
+          return distance <= 30;
+        }
+      }
+      return false;
+    });
+
+    if (clickedObject) {
+      setSelectedObjectId(clickedObject.id);
+      setContextMenuPosition({ x: e.clientX, y: e.clientY });
+      setShowContextMenu(true);
+    } else {
+      setShowContextMenu(false);
+    }
+  }, [config.drawingObjects, chartToCanvasCoords]);
 
   // Handle text input completion
   const handleTextInputSubmit = useCallback(() => {
@@ -316,8 +453,21 @@ export function ChartContainer() {
       if (obj.points.length < 1) return;
 
       const isSelected = obj.id === selectedObjectId;
-      ctx.strokeStyle = isSelected ? '#3b82f6' : obj.color;
-      ctx.lineWidth = obj.lineWidth;
+      const isHovered = obj.id === hoveredObjectId;
+      
+      // Enhanced styling for hovered and selected objects
+      if (isSelected || isHovered) {
+        ctx.shadowColor = isSelected ? '#3b82f6' : '#60a5fa';
+        ctx.shadowBlur = isSelected ? 8 : 4;
+        ctx.strokeStyle = isSelected ? '#3b82f6' : (isHovered ? '#60a5fa' : obj.color);
+        ctx.lineWidth = (isSelected || isHovered) ? obj.lineWidth + 1 : obj.lineWidth;
+      } else {
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = obj.color;
+        ctx.lineWidth = obj.lineWidth;
+      }
+      
       ctx.lineCap = 'round';
 
       switch (obj.type) {
@@ -340,7 +490,23 @@ export function ChartContainer() {
         drawEndpoints(ctx, obj, data, isSelected);
       }
     });
-  }, [config.drawingObjects, currentDrawingObject, selectedObjectId, config.selectedTool]);
+
+    // Draw preview point for first click
+    if (previewPoint && isInDrawMode && config.selectedTool !== 'cursor' && !isDrawing) {
+      const canvasPoint = chartToCanvasCoords(previewPoint.price, previewPoint.time, data);
+      if (canvasPoint) {
+        ctx.save();
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#3b82f6';
+        ctx.globalAlpha = 0.7;
+        ctx.beginPath();
+        ctx.arc(canvasPoint.x, canvasPoint.y, 5, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+  }, [config.drawingObjects, currentDrawingObject, selectedObjectId, hoveredObjectId, previewPoint, isInDrawMode, isDrawing, config.selectedTool, chartToCanvasCoords]);
 
   // Draw draggable endpoints
   const drawEndpoints = useCallback((ctx: CanvasRenderingContext2D, obj: DrawingObject, data: ChartDataPoint[], isSelected: boolean) => {
@@ -1056,6 +1222,7 @@ export function ChartContainer() {
             }
             // Allow normal scrolling for cursor tool
           }}
+          onContextMenu={handleContextMenu}
         />
         
         {isLoading && (
@@ -1187,6 +1354,56 @@ export function ChartContainer() {
                   </button>
                 </div>
               </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Context Menu */}
+        <AnimatePresence>
+          {showContextMenu && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.15 }}
+              className="fixed z-50 bg-slate-800 border border-slate-600 rounded-lg shadow-lg overflow-hidden"
+              style={{
+                left: Math.min(contextMenuPosition.x, window.innerWidth - 180),
+                top: Math.min(contextMenuPosition.y, window.innerHeight - 120),
+              }}
+              onMouseLeave={() => setShowContextMenu(false)}
+            >
+              <div className="py-1">
+                <button
+                  className="w-full px-4 py-2 text-left text-sm text-slate-200 hover:bg-slate-700 transition-colors"
+                  onClick={() => {
+                    if (selectedObjectId) {
+                      removeDrawingObject(selectedObjectId);
+                      setSelectedObjectId(null);
+                    }
+                    setShowContextMenu(false);
+                  }}
+                >
+                  🗑️ Delete
+                </button>
+                <button
+                  className="w-full px-4 py-2 text-left text-sm text-slate-200 hover:bg-slate-700 transition-colors"
+                  onClick={() => {
+                    // Future: Add styling options
+                    setShowContextMenu(false);
+                  }}
+                >
+                  🎨 Style
+                </button>
+                <button
+                  className="w-full px-4 py-2 text-left text-sm text-slate-200 hover:bg-slate-700 transition-colors"
+                  onClick={() => {
+                    setShowContextMenu(false);
+                  }}
+                >
+                  🔒 Lock
+                </button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
