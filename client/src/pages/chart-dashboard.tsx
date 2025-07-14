@@ -12,7 +12,7 @@ import { useWebSocket } from '@/hooks/use-websocket';
 
 export default function ChartDashboard() {
   const { config, isLoading } = useChartStore();
-  const { isSettingsOpen, whiteLabel } = useSettingsStore();
+  const { isSettingsOpen, whiteLabel, isFullscreen } = useSettingsStore();
   const { isConnected } = useWebSocket();
 
   useEffect(() => {
@@ -21,6 +21,26 @@ export default function ChartDashboard() {
     root.style.setProperty('--primary-color', whiteLabel.primaryColor);
     root.style.setProperty('--secondary-color', whiteLabel.secondaryColor);
   }, [whiteLabel]);
+
+  // Handle fullscreen mode
+  if (isFullscreen) {
+    return (
+      <div className="h-screen flex flex-col bg-slate-900 text-slate-100">
+        <ChartToolbar />
+        
+        <div className="flex-1 bg-slate-900 relative">
+          <ChartContainer />
+        </div>
+        
+        {config.showVolume && (
+          <VolumeChart />
+        )}
+        
+        {isSettingsOpen && <SettingsModal />}
+        {isLoading && <LoadingOverlay />}
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen flex flex-col bg-slate-900 text-slate-100">

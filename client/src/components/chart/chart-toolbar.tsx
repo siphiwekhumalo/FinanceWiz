@@ -1,6 +1,7 @@
-import { ZoomIn, ZoomOut, RotateCcw, Grid, Crosshair, Volume2 } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw, Grid, Crosshair, Volume2, Maximize, Minimize } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChartStore } from '@/store/chart-store';
+import { useSettingsStore } from '@/store/settings-store';
 import { ChartTypeDropdown } from './chart-type-dropdown';
 import { TimeframeDropdown } from './timeframe-dropdown';
 import { IndicatorsDropdown } from './indicators-dropdown';
@@ -10,6 +11,7 @@ import { DataSourceToggle } from './data-source-toggle';
 
 export function ChartToolbar() {
   const { toggleVolume, toggleCrosshair, resetZoom, config } = useChartStore();
+  const { isFullscreen, setFullscreen } = useSettingsStore();
 
   return (
     <div className="flex items-center justify-between bg-slate-800 border-b border-slate-700 p-2">
@@ -88,6 +90,18 @@ export function ChartToolbar() {
           title="Toggle Crosshair"
         >
           <Crosshair className="h-4 w-4" />
+        </Button>
+        
+        <div className="w-px h-4 bg-slate-600 mx-1" />
+        
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setFullscreen(!isFullscreen)}
+          className="px-2 py-1 h-8"
+          title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+        >
+          {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
         </Button>
       </div>
     </div>

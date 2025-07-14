@@ -41,7 +41,7 @@ export function ChartContainer() {
     const pixelRatio = window.devicePixelRatio || 1;
     const width = rect.width;
     const height = rect.height;
-    const padding = 60;
+    const padding = 40; // Reduced padding for more chart space
     const chartWidth = width - 2 * padding;
     const chartHeight = height - 2 * padding;
     
