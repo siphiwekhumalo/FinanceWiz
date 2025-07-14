@@ -595,6 +595,9 @@ export function ChartContainer() {
   // Draw comparison symbols
   const drawComparisonSymbols = useCallback((ctx: CanvasRenderingContext2D, data: ChartDataPoint[], minPrice: number, maxPrice: number, priceRange: number, visibleData: ChartDataPoint[]) => {
     if (!config.comparisonSymbols.length) return;
+    
+    // Debug: Log comparison symbols
+    console.log('Drawing comparison symbols:', config.comparisonSymbols.length, config.comparisonSymbols);
 
     const canvas = ctx.canvas;
     const { width, height } = canvas;
@@ -614,14 +617,14 @@ export function ChartContainer() {
     if (priceRange === 0) return;
 
     config.comparisonSymbols.forEach(compSymbol => {
-      if (!compSymbol.enabled || !compSymbol.data || compSymbol.data.length === 0) return;
+      if (!compSymbol.enabled) return;
 
       ctx.save();
       ctx.strokeStyle = compSymbol.color;
       ctx.lineWidth = 2;
       ctx.setLineDash([]);
 
-      // Regenerate comparison data aligned with main chart timestamps
+      // Always regenerate comparison data aligned with main chart timestamps
       // This ensures proper time alignment regardless of chart changes
       const mainTimestamps = visibleData.map(point => point.time);
       const chartService = ChartService.getInstance();
@@ -631,6 +634,11 @@ export function ChartContainer() {
         100,
         mainTimestamps
       );
+      
+      if (alignedCompData.length === 0) {
+        ctx.restore();
+        return;
+      }
       
       const alignedVisibleData = alignedCompData.slice(0, visibleData.length);
 
