@@ -20,6 +20,7 @@ export function ChartContainer() {
   const lastMousePosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const velocityRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const [ohlcPosition, setOhlcPosition] = useState({ x: 20, y: 20 });
+  const [offlinePosition, setOfflinePosition] = useState({ x: 20, y: 0 });
   const [showHelpOverlay, setShowHelpOverlay] = useState(true);
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentDrawingObject, setCurrentDrawingObject] = useState<DrawingObject | null>(null);
@@ -1596,20 +1597,61 @@ export function ChartContainer() {
           </motion.div>
         )}
         
-        {/* Connection Status - Bottom Left of Chart */}
-        <div className="absolute bottom-4 left-4 z-10">
-          <div className="bg-slate-800/90 backdrop-blur-sm rounded-lg p-2 border border-slate-700">
-            <div className="flex items-center space-x-2">
-              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400 animate-pulse' : 'bg-slate-500'}`} />
-              <span className="text-xs text-slate-400">
-                {isConnected ? 'Live' : 'Offline'}
-              </span>
-              <span className="text-xs text-slate-400">
-                {getCurrentTime()}
-              </span>
-            </div>
+        {/* Draggable Connection Status */}
+        <motion.div 
+          className="absolute bg-slate-800/90 backdrop-blur-sm rounded-lg p-2 border border-slate-700 cursor-move select-none z-10"
+          style={{ 
+            left: `${offlinePosition.x}px`, 
+            bottom: `${16 + offlinePosition.y}px`
+          }}
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          whileHover={{ 
+            scale: 1.02, 
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+            borderColor: 'rgba(34, 197, 94, 0.5)'
+          }}
+          whileTap={{ scale: 0.98 }}
+          transition={{ 
+            type: 'spring', 
+            stiffness: 300, 
+            damping: 20 
+          }}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            const startX = e.clientX;
+            const startY = e.clientY;
+            const startPos = { ...offlinePosition };
+            
+            const handleMouseMove = (e: MouseEvent) => {
+              const deltaX = e.clientX - startX;
+              const deltaY = startY - e.clientY; // Invert Y for bottom positioning
+              
+              setOfflinePosition({
+                x: Math.max(0, Math.min(startPos.x + deltaX, (containerRef.current?.offsetWidth || 400) - 150)),
+                y: Math.max(-100, Math.min(100, startPos.y + deltaY))
+              });
+            };
+            
+            const handleMouseUp = () => {
+              document.removeEventListener('mousemove', handleMouseMove);
+              document.removeEventListener('mouseup', handleMouseUp);
+            };
+            
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+          }}
+        >
+          <div className="flex items-center space-x-2">
+            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400 animate-pulse' : 'bg-slate-500'}`} />
+            <span className="text-xs text-slate-400">
+              {isConnected ? 'Live' : 'Offline'}
+            </span>
+            <span className="text-xs text-slate-400">
+              {getCurrentTime()}
+            </span>
           </div>
-        </div>
+        </motion.div>
         
         {/* Dismissible Help Overlay with Animation */}
         <AnimatePresence>
