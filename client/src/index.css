@@ -65,12 +65,66 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    /* Enhanced font rendering for HD displays */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  
+  /* HD Canvas improvements */
+  canvas {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+    image-rendering: pixelated;
   }
 }
 
 @layer components {
   .chart-container {
     background-color: hsl(var(--chart-background));
+    /* HD rendering optimizations */
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+  }
+  
+  /* Smooth animations for draggable elements */
+  .draggable-element {
+    transition: transform 0.1s ease-out;
+    will-change: transform;
+  }
+  
+  .draggable-element:hover {
+    transform: translateZ(10px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+  }
+  
+  /* Enhanced scrollbar styling */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: hsl(var(--chart-background));
+    border-radius: 4px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--chart-neutral));
+    border-radius: 4px;
+    border: 2px solid hsl(var(--chart-background));
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--chart-border));
+  }
+  
+  /* Crisp pixel rendering for indicators */
+  .pixel-crisp {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+    image-rendering: pixelated;
   }
   
   .chart-surface {

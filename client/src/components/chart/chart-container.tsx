@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useChartStore } from '@/store/chart-store';
 import { ChartUtils } from '@/utils/chart-utils';
 import { ChartService } from '@/services/chart-service';
@@ -44,15 +45,24 @@ export function ChartContainer() {
     const chartWidth = width - 2 * padding;
     const chartHeight = height - 2 * padding;
     
-    // Enable HD rendering
+    // Enable HD rendering with enhanced anti-aliasing
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
-
-    // Clear canvas
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'start';
+    
+    // Pixel-perfect rendering adjustments
+    const pixelOffset = 0.5; // For crisp 1px lines
+    
+    // Clear canvas with proper compositing
+    ctx.globalCompositeOperation = 'source-over';
     ctx.clearRect(0, 0, width, height);
 
-    // Set canvas background
-    ctx.fillStyle = '#0F172A';
+    // Set canvas background with gradient for depth
+    const gradient = ctx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, '#0F172A');
+    gradient.addColorStop(1, '#1E293B');
+    ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, width, height);
 
     // Calculate price and time ranges
@@ -66,22 +76,22 @@ export function ChartContainer() {
     const maxTime = Math.max(...times);
     const timeRange = maxTime - minTime;
 
-    // Draw grid (almost invisible)
+    // Draw grid (almost invisible) with pixel-perfect lines
     ctx.strokeStyle = '#1e293b';
-    ctx.lineWidth = 0.5;
+    ctx.lineWidth = 1;
     
-    // Horizontal grid lines
+    // Horizontal grid lines with pixel offset for crisp rendering
     for (let i = 0; i <= 5; i++) {
-      const y = padding + (i * chartHeight) / 5;
+      const y = Math.floor(padding + (i * chartHeight) / 5) + pixelOffset;
       ctx.beginPath();
       ctx.moveTo(padding, y);
       ctx.lineTo(width - padding, y);
       ctx.stroke();
     }
 
-    // Vertical grid lines
+    // Vertical grid lines with pixel offset
     for (let i = 0; i <= 8; i++) {
-      const x = padding + (i * chartWidth) / 8;
+      const x = Math.floor(padding + (i * chartWidth) / 8) + pixelOffset;
       ctx.beginPath();
       ctx.moveTo(x, padding);
       ctx.lineTo(x, height - padding);
@@ -121,30 +131,52 @@ export function ChartContainer() {
 
     // Draw chart based on type
     if (config.chartType === 'candlestick') {
-      // Draw candlesticks
+      // Draw candlesticks with enhanced HD rendering
       visibleData.forEach((point, index) => {
-        const x = padding + (index * chartWidth) / (visibleData.length - 1);
-        const openY = padding + ((maxPrice - point.open) * chartHeight) / priceRange;
-        const highY = padding + ((maxPrice - point.high) * chartHeight) / priceRange;
-        const lowY = padding + ((maxPrice - point.low) * chartHeight) / priceRange;
-        const closeY = padding + ((maxPrice - point.close) * chartHeight) / priceRange;
+        const x = Math.floor(padding + (index * chartWidth) / (visibleData.length - 1));
+        const openY = Math.floor(padding + ((maxPrice - point.open) * chartHeight) / priceRange);
+        const highY = Math.floor(padding + ((maxPrice - point.high) * chartHeight) / priceRange);
+        const lowY = Math.floor(padding + ((maxPrice - point.low) * chartHeight) / priceRange);
+        const closeY = Math.floor(padding + ((maxPrice - point.close) * chartHeight) / priceRange);
 
         const isUp = point.close > point.open;
-        const candleWidth = Math.max(3, chartWidth / visibleData.length * 0.8);
+        const candleWidth = Math.max(4, Math.floor(chartWidth / visibleData.length * 0.8));
 
-        // Draw wick with HD quality
-        ctx.strokeStyle = isUp ? '#22c55e' : '#ef4444';
+        // Enhanced color palette with better contrast
+        const upColor = '#10b981';
+        const downColor = '#ef4444';
+        const shadowColor = 'rgba(0, 0, 0, 0.2)';
+
+        // Draw subtle shadow for depth
+        ctx.fillStyle = shadowColor;
+        ctx.fillRect(x - candleWidth / 2 + 1, Math.min(openY, closeY) + 1, candleWidth, Math.max(1, Math.abs(closeY - openY)));
+
+        // Draw wick with anti-aliasing
+        ctx.strokeStyle = isUp ? upColor : downColor;
         ctx.lineWidth = 1;
+        ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.moveTo(x, highY);
-        ctx.lineTo(x, lowY);
+        ctx.moveTo(x + pixelOffset, highY);
+        ctx.lineTo(x + pixelOffset, lowY);
         ctx.stroke();
 
-        // Draw candle body
-        ctx.fillStyle = isUp ? '#22c55e' : '#ef4444';
+        // Draw candle body with rounded corners effect
+        ctx.fillStyle = isUp ? upColor : downColor;
         const bodyTop = Math.min(openY, closeY);
-        const bodyHeight = Math.max(1, Math.abs(closeY - openY));
+        const bodyHeight = Math.max(2, Math.abs(closeY - openY));
+        
+        // Add subtle gradient to candle body
+        const bodyGradient = ctx.createLinearGradient(x - candleWidth / 2, bodyTop, x + candleWidth / 2, bodyTop);
+        bodyGradient.addColorStop(0, isUp ? '#065f46' : '#7f1d1d');
+        bodyGradient.addColorStop(0.5, isUp ? upColor : downColor);
+        bodyGradient.addColorStop(1, isUp ? '#065f46' : '#7f1d1d');
+        ctx.fillStyle = bodyGradient;
+        
         ctx.fillRect(x - candleWidth / 2, bodyTop, candleWidth, bodyHeight);
+        
+        // Add highlight on top edge
+        ctx.fillStyle = isUp ? '#34d399' : '#f87171';
+        ctx.fillRect(x - candleWidth / 2, bodyTop, candleWidth, 1);
       });
     } else if (config.chartType === 'line') {
       // Draw line chart with HD quality
@@ -457,12 +489,25 @@ export function ChartContainer() {
 
   return (
     <div className="w-full h-full relative">
-      {/* Draggable OHLC Display */}
-      <div 
-        className="absolute bg-slate-800/90 backdrop-blur-sm rounded-lg p-3 border border-slate-700 cursor-move select-none z-20"
+      {/* Draggable OHLC Display with Framer Motion */}
+      <motion.div 
+        className="absolute bg-slate-800/95 backdrop-blur-sm rounded-lg p-3 border border-slate-700/50 cursor-move select-none z-20 draggable-element"
         style={{ 
           left: `${ohlcPosition.x}px`, 
           top: `${ohlcPosition.y}px`
+        }}
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        whileHover={{ 
+          scale: 1.02, 
+          boxShadow: '0 8px 25px rgba(0, 0, 0, 0.3)',
+          borderColor: 'rgba(59, 130, 246, 0.5)'
+        }}
+        whileTap={{ scale: 0.98 }}
+        transition={{ 
+          type: 'spring', 
+          stiffness: 300, 
+          damping: 20 
         }}
         onMouseDown={(e) => {
           e.preventDefault();
@@ -513,7 +558,7 @@ export function ChartContainer() {
             </p>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Chart Canvas - Always Display */}
       <div ref={containerRef} id="chart-container" className="w-full h-full bg-slate-900 relative overflow-hidden">
@@ -524,13 +569,36 @@ export function ChartContainer() {
         />
         
         {isLoading && (
-          <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center">
+          <motion.div 
+            className="absolute inset-0 bg-slate-900/90 backdrop-blur-sm flex items-center justify-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
             <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent mx-auto mb-4"></div>
-              <h3 className="text-lg font-medium text-slate-400 mb-2">Loading Chart...</h3>
-              <p className="text-sm text-slate-500">Generating market data...</p>
+              <motion.div 
+                className="rounded-full h-12 w-12 border-4 border-blue-500/20 border-t-blue-500 mx-auto mb-4"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              />
+              <motion.h3 
+                className="text-lg font-medium text-slate-300 mb-2"
+                initial={{ y: 10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+              >
+                Loading Chart...
+              </motion.h3>
+              <motion.p 
+                className="text-sm text-slate-500"
+                initial={{ y: 10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.4 }}
+              >
+                Generating market data...
+              </motion.p>
             </div>
-          </div>
+          </motion.div>
         )}
         
         {/* Connection Status - Bottom of Chart */}
@@ -548,25 +616,39 @@ export function ChartContainer() {
           </div>
         </div>
         
-        {/* Dismissible Help Overlay */}
-        {!isLoading && showHelpOverlay && (
-          <div className="absolute top-4 right-4 bg-black/80 text-white text-xs px-3 py-2 rounded-lg backdrop-blur-sm border border-slate-600 z-10">
-            <div className="flex items-start justify-between">
-              <div className="space-y-1">
-                <div>• Drag to scroll horizontally</div>
-                <div>• Ctrl/Cmd + Wheel to zoom</div>
-                <div>• Arrow keys to navigate</div>
-                <div>• Home/End for quick jump</div>
+        {/* Dismissible Help Overlay with Animation */}
+        <AnimatePresence>
+          {!isLoading && showHelpOverlay && (
+            <motion.div 
+              className="absolute top-4 right-4 bg-black/90 backdrop-blur-md text-white text-xs px-4 py-3 rounded-lg border border-slate-600/50 z-10"
+              initial={{ opacity: 0, scale: 0.9, x: 20 }}
+              animate={{ opacity: 1, scale: 1, x: 0 }}
+              exit={{ opacity: 0, scale: 0.9, x: 20 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+            >
+              <div className="flex items-start justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center text-blue-400 mb-1">
+                    <span className="mr-2">⌨️</span>
+                    <span className="font-semibold">Controls</span>
+                  </div>
+                  <div className="text-slate-300">• Drag to scroll horizontally</div>
+                  <div className="text-slate-300">• Ctrl/Cmd + Wheel to zoom</div>
+                  <div className="text-slate-300">• Arrow keys to navigate</div>
+                  <div className="text-slate-300">• Home/End for quick jump</div>
+                </div>
+                <motion.button 
+                  onClick={() => setShowHelpOverlay(false)}
+                  className="ml-4 text-slate-400 hover:text-white text-lg leading-none"
+                  whileHover={{ scale: 1.2 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  ×
+                </motion.button>
               </div>
-              <button 
-                onClick={() => setShowHelpOverlay(false)}
-                className="ml-3 text-slate-400 hover:text-white"
-              >
-                ×
-              </button>
-            </div>
-          </div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
