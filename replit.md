@@ -39,6 +39,7 @@ Preferred communication style: Simple, everyday language.
 - **Real-time Data Service**: Handles live market data through WebSocket connections
 - **Chart Service**: Manages data transformation and chart configuration
 - **Storage Layer**: Abstracted storage interface supporting both in-memory and PostgreSQL backends
+- **Advanced Features Service**: Centralized service for managing compare symbols, indicators, backtesting, and analytics
 
 ### White-label Customization
 - **Theme System**: CSS variables for colors, fonts, and UI elements
@@ -109,6 +110,18 @@ Preferred communication style: Simple, everyday language.
 - **Responsive Design**: Works across desktop and mobile devices
 - **Data Sources**: Support for both dummy data and real market data feeds
 
+### Advanced Trading Features (Professional-Grade)
+- **Compare Mode**: Overlay multiple symbols with percentage or price-based comparison
+- **Technical Indicators**: RSI, MACD, Bollinger Bands, SMA, EMA, VWAP with customizable parameters
+- **Strategy Backtesting**: Test trading strategies with historical data and performance metrics
+- **Market Events**: Earnings, dividends, splits, and news event markers with impact levels
+- **Chart Notes**: Collaborative annotation system for traders and analysts
+- **Export Options**: PNG, PDF, CSV, and JSON exports with customizable resolution and branding
+- **Replay Mode**: Step-through historical data playback for analysis and training
+- **Gap Detection**: Automatic identification and highlighting of price gaps
+- **Multi-Symbol Panels**: Compare multiple instruments simultaneously
+- **Full-Screen Mode**: Dedicated trading interface with expanded chart view
+
 ## HD Interface Implementation
 
 ### High-Definition Rendering
@@ -153,3 +166,12 @@ Preferred communication style: Simple, everyday language.
 - **Integrated CI/CD GitHub Actions workflow with automated testing and quality gates**
 - **Added Stryker mutation testing for comprehensive test quality validation**
 - **Created complete test suite with unit, integration, and mutation testing**
+- **Implemented comprehensive advanced trading features to compete with TradingView/ChartIQ**
+- **Built compare mode with percentage/price overlay system for multiple symbols**
+- **Added technical indicators panel (RSI, MACD, Bollinger Bands, SMA, EMA, VWAP)**
+- **Created strategy backtesting engine with win rate analysis and P&L tracking**
+- **Integrated market events system for earnings, dividends, splits, and news markers**
+- **Built chart notes system for trader annotations and collaborative features**
+- **Added export functionality (PNG, PDF, CSV, JSON) with customizable resolution**
+- **Implemented replay mode for historical data playback and analysis**
+- **Created advanced features panel with tabbed interface and comprehensive controls**
