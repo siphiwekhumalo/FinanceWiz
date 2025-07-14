@@ -86,9 +86,9 @@ export function ChartContainer() {
     const rect = canvas.getBoundingClientRect();
     const { width, height } = canvas;
     const leftPadding = 0;
-    const rightPadding = 60;
-    const topPadding = 40;
-    const bottomPadding = 40;
+    const rightPadding = 50;
+    const topPadding = 0;
+    const bottomPadding = 25;
     const chartWidth = width - leftPadding - rightPadding;
     const chartHeight = height - topPadding - bottomPadding;
 
@@ -116,9 +116,9 @@ export function ChartContainer() {
 
     const { width, height } = canvas;
     const leftPadding = 0;
-    const rightPadding = 60;
-    const topPadding = 40;
-    const bottomPadding = 40;
+    const rightPadding = 50;
+    const topPadding = 0;
+    const bottomPadding = 25;
     const chartWidth = width - leftPadding - rightPadding;
     const chartHeight = height - topPadding - bottomPadding;
 
@@ -797,9 +797,9 @@ export function ChartContainer() {
     const width = rect.width;
     const height = rect.height;
     const leftPadding = 0; // Start from left edge
-    const rightPadding = 60; // Space for price labels
-    const topPadding = 40;
-    const bottomPadding = 40;
+    const rightPadding = 50; // Minimal space for price labels
+    const topPadding = 0; // Start from top edge
+    const bottomPadding = 25; // Minimal space for time labels
     const chartWidth = width - leftPadding - rightPadding;
     const chartHeight = height - topPadding - bottomPadding;
     
@@ -979,7 +979,7 @@ export function ChartContainer() {
             });
         }
         
-        ctx.fillText(timeStr, x, height - bottomPadding + 20);
+        ctx.fillText(timeStr, x, height - bottomPadding + 15);
       }
     }
 
@@ -1120,7 +1120,7 @@ export function ChartContainer() {
     // Draw scroll indicator
     if (data.length > visibleDataCount) {
       const scrollbarHeight = 4;
-      const scrollbarY = height - bottomPadding + 40;
+      const scrollbarY = height - bottomPadding + 35;
       const scrollbarWidth = chartWidth;
       const scrollProgress = currentScrollOffset / maxScrollOffset;
       
