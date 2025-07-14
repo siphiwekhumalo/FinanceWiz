@@ -17,18 +17,20 @@ export class DummyDataService {
     const now = Date.now();
     const timeframeMs = this.getTimeframeMs(timeframe);
     
+    // Generate more data points for longer timeframes
+    const adjustedCount = this.getAdjustedCount(timeframe, count);
     let currentPrice = this.basePrice;
     
-    for (let i = count; i > 0; i--) {
+    for (let i = adjustedCount; i > 0; i--) {
       const timestamp = now - (i * timeframeMs);
-      const volatility = 0.02;
+      const volatility = this.getVolatilityForTimeframe(timeframe);
       const change = (Math.random() - 0.5) * volatility;
       
       const open = currentPrice;
       const close = currentPrice * (1 + change);
-      const high = Math.max(open, close) * (1 + Math.random() * 0.01);
-      const low = Math.min(open, close) * (1 - Math.random() * 0.01);
-      const volume = Math.floor(Math.random() * 1000000);
+      const high = Math.max(open, close) * (1 + Math.random() * volatility * 0.5);
+      const low = Math.min(open, close) * (1 - Math.random() * volatility * 0.5);
+      const volume = this.getVolumeForTimeframe(timeframe);
       
       data.push({
         time: Math.floor(timestamp / 1000),
@@ -143,9 +145,53 @@ export class DummyDataService {
       '1h': 60 * 60 * 1000,
       '4h': 4 * 60 * 60 * 1000,
       '1d': 24 * 60 * 60 * 1000,
-      '1w': 7 * 24 * 60 * 60 * 1000
+      '1w': 7 * 24 * 60 * 60 * 1000,
+      '1y': 365 * 24 * 60 * 60 * 1000
     };
     return timeframeMap[timeframe] || timeframeMap['1h'];
+  }
+
+  private getAdjustedCount(timeframe: string, baseCount: number): number {
+    switch (timeframe) {
+      case '1m': return Math.min(baseCount, 500);
+      case '5m': return Math.min(baseCount, 400);
+      case '15m': return Math.min(baseCount, 300);
+      case '1h': return Math.min(baseCount, 200);
+      case '4h': return Math.min(baseCount, 150);
+      case '1d': return Math.min(baseCount, 100);
+      case '1w': return Math.min(baseCount, 80);
+      case '1y': return Math.min(baseCount, 50);
+      default: return baseCount;
+    }
+  }
+
+  private getVolatilityForTimeframe(timeframe: string): number {
+    switch (timeframe) {
+      case '1m': return 0.005;
+      case '5m': return 0.01;
+      case '15m': return 0.015;
+      case '1h': return 0.02;
+      case '4h': return 0.03;
+      case '1d': return 0.04;
+      case '1w': return 0.06;
+      case '1y': return 0.15;
+      default: return 0.02;
+    }
+  }
+
+  private getVolumeForTimeframe(timeframe: string): number {
+    const base = Math.floor(Math.random() * 1000000) + 100000;
+    switch (timeframe) {
+      case '1m': return Math.floor(base * 0.1);
+      case '5m': return Math.floor(base * 0.5);
+      case '15m': return Math.floor(base * 1.5);
+      case '1h': return Math.floor(base * 6);
+      case '4h': return Math.floor(base * 24);
+      case '1d': return Math.floor(base * 144);
+      case '1w': return Math.floor(base * 1008);
+      case '1y': return Math.floor(base * 52560);
+      default: return base;
+    }
   }
 
   private getSymbolName(symbol: string): string {

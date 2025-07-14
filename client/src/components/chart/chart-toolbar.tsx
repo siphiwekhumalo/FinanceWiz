@@ -1,21 +1,11 @@
 import { ZoomIn, ZoomOut, RotateCcw, Grid, Crosshair, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useChartStore } from '@/store/chart-store';
-import { Timeframe } from '@/types/chart-types';
 import { ChartTypeDropdown } from './chart-type-dropdown';
+import { TimeframeDropdown } from './timeframe-dropdown';
 
 export function ChartToolbar() {
-  const { config, setTimeframe, toggleVolume, toggleCrosshair, resetZoom } = useChartStore();
-
-  const timeframes: { value: Timeframe; label: string }[] = [
-    { value: '1m', label: '1M' },
-    { value: '5m', label: '5M' },
-    { value: '15m', label: '15M' },
-    { value: '1h', label: '1H' },
-    { value: '4h', label: '4H' },
-    { value: '1d', label: '1D' },
-    { value: '1w', label: '1W' },
-  ];
+  const { toggleVolume, toggleCrosshair, resetZoom, config } = useChartStore();
 
   return (
     <div className="flex items-center justify-between bg-slate-800 border-b border-slate-700 p-2">
@@ -25,19 +15,7 @@ export function ChartToolbar() {
         
         <div className="w-px h-4 bg-slate-600" />
         
-        <div className="flex items-center space-x-1">
-          {timeframes.map((timeframe) => (
-            <Button
-              key={timeframe.value}
-              variant={config.timeframe === timeframe.value ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setTimeframe(timeframe.value)}
-              className="px-3 py-1 h-8 text-xs"
-            >
-              {timeframe.label}
-            </Button>
-          ))}
-        </div>
+        <TimeframeDropdown />
       </div>
 
       {/* Right side - Chart controls */}
