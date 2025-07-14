@@ -1,0 +1,75 @@
+ 1. Each Symbol = Independent Line or Candle Series
+No normalization. Each stock/symbol (AAPL, AMZN, GOOGL, etc.) has its own raw data and own rendering pipeline.
+
+ts
+Copy
+Edit
+chart.addCandlestickSeries({ priceScaleId: 'aapl-scale' });
+chart.addLineSeries({ priceScaleId: 'googl-scale' });
+chart.addLineSeries({ priceScaleId: 'amzn-scale' });
+✅ 2. Custom Y-Axis for Each Compare Series
+AAPL could use the right Y-axis
+
+GOOGL/AMZN can use custom scales (overlay-left, overlay-right)
+
+ts
+Copy
+Edit
+chart.applyOptions({
+  leftPriceScale: { visible: true },
+  rightPriceScale: { visible: true },
+});
+
+const googlSeries = chart.addLineSeries({
+  priceScaleId: 'left', // or a named custom scale
+  color: '#1976d2',
+});
+✅ 3. Don't Normalize — Just Synchronize Time
+Your timeframe (1M, 15M, 1D, etc.) is the only thing shared.
+Your series simply renders independently, just mapped on the same x-axis.
+
+✅ 4. Design Custom Compare Overlay Logic
+You can innovate by allowing users to:
+
+Toggle "absolute" vs "relative to last close"
+
+Enable multi-scale comparison
+
+Switch between overlay and stacked mode
+
+💡 Ideas for Compare UX Innovation (better than ChartIQ!)
+Feature	Description
+🔀 Independent scales	Each compare symbol has its own Y-axis on hover
+📊 Mini legends	On-hover, show sparkline + latest price for each symbol
+🎨 Chart Style Selector	Choose line, area, dots, histogram per compare
+🧩 Compare Layout Modes	Overlay (default), small multiples (mini charts), stacked view
+🛠 Precision Control	Toggle between raw, percentage, and index-aligned movement
+
+🧠 What Your Charting Tool Will Do Differently
+Feature	Baheka Finance Chart	ChartIQ / TradingView
+Compare based on main symbol?	❌ Independent	✅ Relative to base
+Multiple Y-axes?	✅ Yes, per symbol	☑️ Shared or per overlay
+Flexible rendering mode?	✅ Area/Line/Histogram	☑️ Line only (usually)
+Time sync only?	✅ Pure x-axis sync	❌ Time + price sync
+Custom UX behavior?	✅ Fully yours	❌ Fixed by vendor
+
+🔧 Code Tip for Dummy Compare Data
+If you're injecting dummy compare data (not from backend), just ensure:
+
+ts
+Copy
+Edit
+const timestamps = generateTimestamps('1H', 100); // e.g. 100 hourly points
+
+const aapl = timestamps.map((t, i) => ({
+  time: t,
+  open: ..., high: ..., low: ..., close: ..., volume: ...
+}));
+
+const amzn = timestamps.map((t, i) => ({
+  time: t,
+  value: getFakePrice(i), // line or area chart
+}));
+
+chart.addCandlestickSeries().setData(aapl);
+chart.addLineSeries({ color: 'red' }).setData(amzn);
