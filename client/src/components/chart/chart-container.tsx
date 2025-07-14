@@ -1488,7 +1488,7 @@ export function ChartContainer() {
 
     return () => {
       resizeObserver.disconnect();
-      canvas.removeEventListener('wheel', handleWheel);
+      canvas.removeEventListener('wheel', wheelListener);
       canvas.removeEventListener('mousedown', handleMouseDownNative);
       canvas.removeEventListener('mousemove', handleMouseMoveNative);
       canvas.removeEventListener('mouseup', handleMouseUpNative);
@@ -1516,22 +1516,27 @@ export function ChartContainer() {
         }
       },
       zoomIn: () => {
+        console.log('Chart instance zoomIn called');
         const newZoom = Math.min(5, zoomLevelRef.current * 1.2);
+        console.log('Zoom level changing from', zoomLevelRef.current, 'to', newZoom);
         zoomLevelRef.current = newZoom;
         if (canvasRef.current && chartDataRef.current.length > 0) {
           drawChart(canvasRef.current, chartDataRef.current);
         }
       },
       zoomOut: () => {
+        console.log('Chart instance zoomOut called');
         const newZoom = Math.max(0.1, zoomLevelRef.current * 0.8);
+        console.log('Zoom level changing from', zoomLevelRef.current, 'to', newZoom);
         zoomLevelRef.current = newZoom;
         if (canvasRef.current && chartDataRef.current.length > 0) {
           drawChart(canvasRef.current, chartDataRef.current);
         }
       },
       resetZoom: () => {
+        console.log('Chart instance resetZoom called');
         zoomLevelRef.current = 1;
-        scrollOffsetRef.current = 0;
+        scrollOffsetRef.current = Math.max(0, chartDataRef.current.length - 50);
         if (canvasRef.current && chartDataRef.current.length > 0) {
           drawChart(canvasRef.current, chartDataRef.current);
         }
