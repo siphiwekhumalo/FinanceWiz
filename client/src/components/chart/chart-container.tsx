@@ -653,19 +653,33 @@ export function ChartContainer() {
           }
         });
       } else {
-        // Absolute mode: plot comparison data on the same price scale as main chart
-        compVisibleData.forEach((point, index) => {
-          const x = padding + (index * chartWidth) / (visibleData.length - 1);
-          
-          // Use the main chart's price range to position the comparison symbol
-          const y = padding + ((maxPrice - point.close) / priceRange) * chartHeight;
-          
-          if (index === 0) {
-            ctx.moveTo(x, y);
-          } else {
-            ctx.lineTo(x, y);
-          }
-        });
+        // Absolute mode: normalize comparison data to fit within main chart's price range
+        const compPrices = compVisibleData.map(d => d.close);
+        const compMinPrice = Math.min(...compPrices);
+        const compMaxPrice = Math.max(...compPrices);
+        const compPriceRange = compMaxPrice - compMinPrice;
+        
+        if (compPriceRange === 0) {
+          // If comparison data has no price range, draw a flat line at the middle
+          const y = padding + chartHeight / 2;
+          ctx.moveTo(padding, y);
+          ctx.lineTo(padding + chartWidth, y);
+        } else {
+          compVisibleData.forEach((point, index) => {
+            const x = padding + (index * chartWidth) / (visibleData.length - 1);
+            
+            // Normalize comparison price to 0-1 range, then map to main chart range
+            const normalizedPrice = (point.close - compMinPrice) / compPriceRange;
+            const scaledPrice = minPrice + (normalizedPrice * priceRange);
+            const y = padding + ((maxPrice - scaledPrice) / priceRange) * chartHeight;
+            
+            if (index === 0) {
+              ctx.moveTo(x, y);
+            } else {
+              ctx.lineTo(x, y);
+            }
+          });
+        }
       }
 
       // Apply different stroke styles based on comparison symbol style
@@ -700,8 +714,13 @@ export function ChartContainer() {
             const compMaxPrice = Math.max(...compPrices);
             const compPriceRange = compMaxPrice - compMinPrice;
             
-            // Use the main chart's price range for absolute mode
-            y = padding + ((maxPrice - point.close) / priceRange) * chartHeight;
+            if (compPriceRange === 0) {
+              y = padding + chartHeight / 2;
+            } else {
+              const normalizedPrice = (point.close - compMinPrice) / compPriceRange;
+              const scaledPrice = minPrice + (normalizedPrice * priceRange);
+              y = padding + ((maxPrice - scaledPrice) / priceRange) * chartHeight;
+            }
             
             x = padding + (index * chartWidth) / (visibleData.length - 1);
           }
@@ -858,21 +877,10 @@ export function ChartContainer() {
     scrollOffsetRef.current = Math.max(0, Math.min(scrollOffsetRef.current, maxScrollOffset));
     const currentScrollOffset = scrollOffsetRef.current;
 
-    // Calculate price and time ranges including comparison symbols
+    // Calculate price and time ranges for main symbol only
     const prices = data.flatMap(d => [d.open, d.high, d.low, d.close]);
-    let allPrices = [...prices];
-    
-    // Include comparison symbol prices in the overall price range calculation
-    config.comparisonSymbols.forEach(compSymbol => {
-      if (compSymbol.enabled && compSymbol.data && compSymbol.data.length > 0) {
-        const compVisibleData = compSymbol.data.slice(currentScrollOffset, currentScrollOffset + visibleDataCount);
-        const compPrices = compVisibleData.map(d => d.close);
-        allPrices = allPrices.concat(compPrices);
-      }
-    });
-    
-    const minPrice = Math.min(...allPrices);
-    const maxPrice = Math.max(...allPrices);
+    const minPrice = Math.min(...prices);
+    const maxPrice = Math.max(...prices);
     const priceRange = maxPrice - minPrice;
 
     const times = data.map(d => d.time);
