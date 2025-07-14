@@ -957,6 +957,12 @@ export function ChartContainer() {
 
     // Enhanced mouse event handlers for smooth scrolling and zooming
     const handleWheel = (e: WheelEvent) => {
+      // Don't handle wheel events when in drawing mode
+      if (isInDrawMode || config.selectedTool !== 'cursor') {
+        e.preventDefault();
+        return;
+      }
+      
       e.preventDefault();
       const data = chartDataRef.current;
       if (data.length === 0) return;
@@ -980,6 +986,11 @@ export function ChartContainer() {
     };
 
     const handleMouseDown = (e: MouseEvent) => {
+      // Don't start dragging if we're in drawing mode or using drawing tools
+      if (isInDrawMode || config.selectedTool !== 'cursor') {
+        return;
+      }
+      
       isDraggingRef.current = true;
       const startX = e.clientX;
       const startY = e.clientY;
@@ -1121,7 +1132,7 @@ export function ChartContainer() {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [config.symbol, config.chartType, config.timeframe, config.dataSource, config.showVolume, drawChart]);
+  }, [config.symbol, config.chartType, config.timeframe, config.dataSource, config.showVolume, drawChart, isInDrawMode, config.selectedTool]);
 
   // Update chart when data changes
   useEffect(() => {
