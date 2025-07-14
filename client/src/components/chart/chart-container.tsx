@@ -602,14 +602,16 @@ export function ChartContainer() {
     const chartWidth = width - padding * 2;
     const chartHeight = height - padding * 2;
 
-    const visibleDataCount = Math.max(15, Math.floor(chartWidth / 8 / zoomLevelRef.current));
-    const startIndex = Math.max(0, scrollOffsetRef.current);
-    const endIndex = Math.min(data.length, startIndex + visibleDataCount);
+    // Use the same visible data calculation as the main chart
+    const baseVisibleCount = Math.max(20, Math.floor(chartWidth / 8));
+    const zoomedVisibleCount = Math.max(15, Math.floor(baseVisibleCount / zoomLevelRef.current));
+    const visibleDataCount = Math.min(data.length, zoomedVisibleCount);
+    const maxScrollOffset = Math.max(0, data.length - visibleDataCount);
     
-    if (endIndex <= startIndex) return;
-
-    const visibleData = data.slice(startIndex, endIndex);
-    const xStep = chartWidth / Math.max(1, visibleData.length - 1);
+    const currentScrollOffset = Math.max(0, Math.min(scrollOffsetRef.current, maxScrollOffset));
+    const visibleData = data.slice(currentScrollOffset, currentScrollOffset + visibleDataCount);
+    
+    if (visibleData.length === 0) return;
 
     // Get price range for main symbol
     const mainPrices = visibleData.map(d => [d.open, d.high, d.low, d.close]).flat();
@@ -617,15 +619,22 @@ export function ChartContainer() {
     const mainMaxPrice = Math.max(...mainPrices);
     const mainPriceRange = mainMaxPrice - mainMinPrice;
 
+    if (mainPriceRange === 0) return;
+
     config.comparisonSymbols.forEach(compSymbol => {
-      if (!compSymbol.enabled) return;
+      if (!compSymbol.enabled || !compSymbol.data || compSymbol.data.length === 0) return;
 
       ctx.save();
       ctx.strokeStyle = compSymbol.color;
       ctx.lineWidth = 2;
       ctx.setLineDash([]);
 
-      const compVisibleData = compSymbol.data.slice(startIndex, endIndex);
+      // Get comparison data for the same visible range
+      const compVisibleData = compSymbol.data.slice(currentScrollOffset, currentScrollOffset + visibleDataCount);
+      
+      if (compVisibleData.length === 0) return;
+
+      ctx.beginPath();
       
       if (config.comparisonMode === 'percentage') {
         // Percentage mode: normalize to percentage change from first visible point
@@ -634,18 +643,15 @@ export function ChartContainer() {
         
         if (basePrice === 0 || mainBasePrice === 0) return;
         
-        ctx.beginPath();
-        
         compVisibleData.forEach((point, index) => {
           // Calculate percentage change
           const compPercentChange = ((point.close - basePrice) / basePrice) * 100;
-          const mainPercentChange = ((visibleData[index]?.close || mainBasePrice) - mainBasePrice) / mainBasePrice * 100;
           
-          // Map percentage changes to chart coordinates
-          const percentageRange = 20; // Show ±20% range
-          const normalizedY = (compPercentChange + percentageRange) / (2 * percentageRange);
+          // Map percentage changes to chart coordinates (normalize to -20% to +20% range)
+          const percentageRange = 20;
+          const normalizedY = Math.max(0, Math.min(1, (compPercentChange + percentageRange) / (2 * percentageRange)));
           
-          const x = padding + index * xStep;
+          const x = padding + (index * chartWidth) / (visibleData.length - 1);
           const y = padding + chartHeight - (normalizedY * chartHeight);
           
           if (index === 0) {
@@ -661,16 +667,69 @@ export function ChartContainer() {
         const compMaxPrice = Math.max(...compPrices);
         const compPriceRange = compMaxPrice - compMinPrice;
 
-        if (compPriceRange === 0) return;
+        if (compPriceRange === 0) {
+          // If comparison data has no price range, draw a flat line at the middle
+          const y = padding + chartHeight / 2;
+          ctx.moveTo(padding, y);
+          ctx.lineTo(padding + chartWidth, y);
+        } else {
+          compVisibleData.forEach((point, index) => {
+            // Normalize the comparison price to the main symbol's range
+            const normalizedPrice = mainMinPrice + ((point.close - compMinPrice) / compPriceRange) * mainPriceRange;
+            
+            const x = padding + (index * chartWidth) / (visibleData.length - 1);
+            const y = padding + chartHeight - ((normalizedPrice - mainMinPrice) / mainPriceRange) * chartHeight;
+            
+            if (index === 0) {
+              ctx.moveTo(x, y);
+            } else {
+              ctx.lineTo(x, y);
+            }
+          });
+        }
+      }
 
-        ctx.beginPath();
+      // Apply different stroke styles based on comparison symbol style
+      if (compSymbol.style === 'area') {
+        // Create area fill
+        ctx.lineTo(padding + chartWidth, padding + chartHeight); // Bottom right
+        ctx.lineTo(padding, padding + chartHeight); // Bottom left
+        ctx.closePath();
+        ctx.globalAlpha = 0.2;
+        ctx.fillStyle = compSymbol.color;
+        ctx.fill();
+        ctx.globalAlpha = 1;
         
+        // Redraw the line on top
+        ctx.beginPath();
         compVisibleData.forEach((point, index) => {
-          // Normalize the comparison price to the main symbol's range
-          const normalizedPrice = mainMinPrice + ((point.close - compMinPrice) / compPriceRange) * mainPriceRange;
+          let x, y;
           
-          const x = padding + index * xStep;
-          const y = padding + chartHeight - ((normalizedPrice - mainMinPrice) / mainPriceRange) * chartHeight;
+          if (config.comparisonMode === 'percentage') {
+            const basePrice = compVisibleData[0]?.close || 0;
+            if (basePrice === 0) return;
+            
+            const compPercentChange = ((point.close - basePrice) / basePrice) * 100;
+            const percentageRange = 20;
+            const normalizedY = Math.max(0, Math.min(1, (compPercentChange + percentageRange) / (2 * percentageRange)));
+            
+            x = padding + (index * chartWidth) / (visibleData.length - 1);
+            y = padding + chartHeight - (normalizedY * chartHeight);
+          } else {
+            const compPrices = compVisibleData.map(d => d.close);
+            const compMinPrice = Math.min(...compPrices);
+            const compMaxPrice = Math.max(...compPrices);
+            const compPriceRange = compMaxPrice - compMinPrice;
+            
+            if (compPriceRange === 0) {
+              y = padding + chartHeight / 2;
+            } else {
+              const normalizedPrice = mainMinPrice + ((point.close - compMinPrice) / compPriceRange) * mainPriceRange;
+              y = padding + chartHeight - ((normalizedPrice - mainMinPrice) / mainPriceRange) * chartHeight;
+            }
+            
+            x = padding + (index * chartWidth) / (visibleData.length - 1);
+          }
           
           if (index === 0) {
             ctx.moveTo(x, y);
@@ -678,14 +737,6 @@ export function ChartContainer() {
             ctx.lineTo(x, y);
           }
         });
-      }
-
-      // Apply different stroke styles based on comparison symbol style
-      if (compSymbol.style === 'area') {
-        ctx.globalAlpha = 0.2;
-        ctx.fillStyle = compSymbol.color;
-        ctx.fill();
-        ctx.globalAlpha = 1;
       }
       
       ctx.stroke();
