@@ -638,25 +638,14 @@ export function ChartContainer() {
         return;
       }
 
-      // Calculate comparison symbol's own price range for independent scaling
-      const compPrices = alignedVisibleData.flatMap(d => [d.open, d.high, d.low, d.close]);
-      const compMinPrice = Math.min(...compPrices);
-      const compMaxPrice = Math.max(...compPrices);
-      const compPriceRange = compMaxPrice - compMinPrice;
-      
-      if (compPriceRange === 0) {
-        ctx.restore();
-        return;
-      }
-
       ctx.beginPath();
       
-      // Independent series: each symbol uses its own price scale, only time is synchronized
+      // Use combined price range so all symbols are visible on the chart
       alignedVisibleData.forEach((point, index) => {
         const x = padding + (index * chartWidth) / Math.max(1, visibleData.length - 1);
         
-        // Map comparison symbol to its own price scale overlaid on main chart
-        const y = padding + ((compMaxPrice - point.close) / compPriceRange) * chartHeight;
+        // Map comparison symbol using the combined price range (same as main chart)
+        const y = padding + ((maxPrice - point.close) / priceRange) * chartHeight;
         
         if (index === 0) {
           ctx.moveTo(x, y);
@@ -680,7 +669,7 @@ export function ChartContainer() {
         ctx.beginPath();
         alignedVisibleData.forEach((point, index) => {
           const x = padding + (index * chartWidth) / Math.max(1, visibleData.length - 1);
-          const y = padding + ((compMaxPrice - point.close) / compPriceRange) * chartHeight;
+          const y = padding + ((maxPrice - point.close) / priceRange) * chartHeight;
           
           if (index === 0) {
             ctx.moveTo(x, y);
@@ -834,10 +823,37 @@ export function ChartContainer() {
     scrollOffsetRef.current = Math.max(0, Math.min(scrollOffsetRef.current, maxScrollOffset));
     const currentScrollOffset = scrollOffsetRef.current;
 
-    // Calculate price and time ranges for main symbol only
-    const prices = data.flatMap(d => [d.open, d.high, d.low, d.close]);
-    const minPrice = Math.min(...prices);
-    const maxPrice = Math.max(...prices);
+    // Calculate combined price range including all active comparison symbols
+    let allPrices = data.flatMap(d => [d.open, d.high, d.low, d.close]);
+    
+    // Add comparison symbol prices to the range calculation
+    config.comparisonSymbols.forEach(compSymbol => {
+      if (!compSymbol.enabled) return;
+      
+      let compData;
+      if (compSymbol.data && compSymbol.data.length > 0) {
+        const currentScrollOffset = Math.max(0, Math.min(scrollOffsetRef.current, Math.max(0, compSymbol.data.length - visibleDataCount)));
+        compData = compSymbol.data.slice(currentScrollOffset, currentScrollOffset + visibleDataCount);
+      } else {
+        // Generate comparison data for range calculation
+        const mainTimestamps = data.slice(currentScrollOffset, currentScrollOffset + visibleDataCount).map(point => point.time);
+        const chartService = ChartService.getInstance();
+        compData = chartService.dummyService.generateChartData(
+          compSymbol.symbol,
+          config.timeframe,
+          100,
+          mainTimestamps
+        ).slice(0, visibleDataCount);
+      }
+      
+      if (compData.length > 0) {
+        const compPrices = compData.flatMap(d => [d.open, d.high, d.low, d.close]);
+        allPrices = allPrices.concat(compPrices);
+      }
+    });
+    
+    const minPrice = Math.min(...allPrices);
+    const maxPrice = Math.max(...allPrices);
     const priceRange = maxPrice - minPrice;
 
     const times = data.map(d => d.time);
