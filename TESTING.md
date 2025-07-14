@@ -2,240 +2,368 @@
 
 ## Overview
 
-This document outlines the comprehensive testing strategy for the Financial Chart Dashboard project, including unit tests, integration tests, code quality analysis, and SonarQube integration.
+This document outlines the comprehensive testing strategy for the Financial Chart Dashboard project, including unit tests, integration tests, mutation testing, and static code analysis.
 
 ## Testing Stack
 
-### Core Testing Tools
-- **Jest**: JavaScript testing framework with coverage reporting
-- **@testing-library/react**: React component testing utilities
-- **@testing-library/jest-dom**: Custom Jest matchers for DOM elements
+### Core Testing Framework
+- **Jest**: JavaScript testing framework with TypeScript support
+- **@testing-library/react**: Simple and complete testing utilities for React components
 - **@testing-library/user-event**: User interaction simulation
-- **TypeScript**: Static type checking
-- **ESLint**: Code quality and style enforcement
+- **@testing-library/jest-dom**: Custom Jest matchers for DOM testing
 
 ### Code Quality & Analysis
-- **SonarQube**: Static code analysis, bug detection, and code quality metrics
-- **Coverage Reports**: Line, branch, and function coverage tracking
+- **ESLint**: Static code analysis for JavaScript/TypeScript
 - **TypeScript Compiler**: Type checking and compilation validation
+- **SonarQube**: Comprehensive code quality analysis
+- **Stryker Mutator**: Mutation testing for test quality validation
+
+### Test Types
+- **Unit Tests**: Individual function and component testing
+- **Integration Tests**: API routes and service layer testing
+- **Mutation Tests**: Test quality and effectiveness validation
+- **Static Analysis**: Code quality and security scanning
 
 ## Test Structure
 
-### Frontend Tests (`client/src/`)
+### Frontend Tests
 ```
-__tests__/
+client/src/
 ├── components/
-│   └── chart/
-│       └── chart-container.test.tsx
-├── services/
+│   ├── chart/__tests__/
+│   │   └── chart-container.test.tsx
+│   └── ui/__tests__/
+│       └── button.test.tsx
+├── hooks/__tests__/
+│   └── use-websocket.test.ts
+├── services/__tests__/
 │   └── chart-service.test.ts
-├── store/
+├── store/__tests__/
 │   └── chart-store.test.ts
+├── utils/__tests__/
+│   └── chart-utils.test.ts
 └── setupTests.ts
 ```
 
-### Backend Tests (`server/`)
+### Backend Tests
 ```
-__tests__/
-├── storage.test.ts
-├── routes.test.ts (to be created)
-└── index.test.ts (to be created)
+server/
+├── __tests__/
+│   ├── routes.test.ts
+│   └── storage.test.ts
+└── index.ts
 ```
 
-## Running Tests
+## Configuration Files
 
-### Quick Test Commands
+### Jest Configuration (`jest.config.mjs`)
+```javascript
+export default {
+  preset: 'ts-jest',
+  testEnvironment: 'jsdom',
+  setupFilesAfterEnv: ['<rootDir>/client/src/setupTests.ts'],
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/client/src/$1',
+    '^@assets/(.*)$': '<rootDir>/attached_assets/$1',
+    '^@shared/(.*)$': '<rootDir>/shared/$1',
+  },
+  // ... additional configuration
+};
+```
+
+### ESLint Configuration (`.eslintrc.mjs`)
+- TypeScript-specific rules
+- React and JSX accessibility rules
+- Import/export validation
+- Code style consistency
+
+### Stryker Configuration (`stryker.config.mjs`)
+- Mutation testing setup
+- Test quality validation
+- Coverage analysis
+- HTML reporting
+
+### SonarQube Configuration (`sonar-project.properties`)
+- Project metadata
+- Source code paths
+- Coverage report paths
+- Quality gate settings
+
+## Available NPM Scripts
+
+### Basic Testing
 ```bash
 # Run all tests
-npx jest
-
-# Run tests with coverage
-npx jest --coverage
+npm test
 
 # Run tests in watch mode
-npx jest --watch
+npm run test:watch
 
-# Run specific test file
-npx jest chart-container.test.tsx
+# Run tests with coverage
+npm run test:coverage
 
-# Run tests with continuous integration settings
-npx jest --ci --coverage --watchAll=false
+# Run tests for CI/CD
+npm run test:ci
 ```
 
-### Complete Test Suite
+### Advanced Testing
 ```bash
-# Run comprehensive test suite (includes linting, testing, and SonarQube)
-./run-tests.sh
+# Run mutation tests
+npm run test:mutate
+
+# Run complete test suite
+npm run test:all
+
+# Run code quality checks
+npm run quality
+
+# Run SonarQube analysis
+npm run sonar
 ```
 
-### Manual Test Commands
+### Code Quality
 ```bash
+# Run ESLint
+npm run lint
+
+# Fix ESLint issues
+npm run lint:fix
+
 # TypeScript compilation check
-npx tsc --noEmit
-
-# ESLint code quality check
-npx eslint . --ext .ts,.tsx --report-unused-disable-directives --max-warnings 0
-
-# ESLint with auto-fix
-npx eslint . --ext .ts,.tsx --fix
-
-# SonarQube analysis (requires SonarQube server)
-npx sonar-scanner
+npm run check
 ```
-
-## Test Coverage
-
-### Coverage Targets
-- **Statements**: > 80%
-- **Branches**: > 75%
-- **Functions**: > 85%
-- **Lines**: > 80%
-
-### Coverage Reports
-- **HTML Report**: `coverage/lcov-report/index.html`
-- **LCOV Report**: `coverage/lcov.info`
-- **JSON Report**: `coverage/coverage-final.json`
-
-## SonarQube Integration
-
-### Local SonarQube Server
-```bash
-# Start SonarQube with Docker
-docker run -d --name sonarqube -p 9000:9000 sonarqube:latest
-
-# Access SonarQube dashboard
-http://localhost:9000
-
-# Default credentials
-Username: admin
-Password: admin
-```
-
-### SonarQube Configuration
-- **Project Key**: financial-chart-dashboard
-- **Project Name**: Financial Chart Dashboard
-- **Quality Gate**: Default (customizable)
-
-### Code Quality Metrics
-- **Bugs**: Critical issues that need immediate attention
-- **Vulnerabilities**: Security-related code issues
-- **Code Smells**: Maintainability issues
-- **Coverage**: Test coverage percentage
-- **Duplicated Lines**: Code duplication detection
 
 ## Test Categories
 
 ### Unit Tests
-- **Components**: Individual React component testing
-- **Services**: Business logic and API service testing
-- **Stores**: State management testing
-- **Utilities**: Helper function testing
+
+#### Component Tests
+- **Chart Components**: Canvas rendering, user interactions, data visualization
+- **UI Components**: Button behaviors, form validations, responsive design
+- **Hook Tests**: Custom hooks for WebSocket connections, chart management
+
+#### Service Tests
+- **Chart Service**: Data fetching, transformation, chart configuration
+- **WebSocket Service**: Real-time data handling, connection management
+- **Dummy Data Service**: Mock data generation for development
+
+#### Utility Tests
+- **Chart Utils**: Price formatting, volume calculations, percentage changes
+- **Data Validation**: OHLCV data validation, pattern detection
+- **Time Handling**: Timeframe conversions, label generation
 
 ### Integration Tests
-- **API Routes**: Backend endpoint testing
-- **Database**: Storage layer testing
-- **WebSocket**: Real-time communication testing
 
-### End-to-End Tests (Future)
-- **User Workflows**: Complete user journey testing
-- **Cross-browser**: Browser compatibility testing
-- **Performance**: Load and stress testing
+#### API Route Tests
+- **Symbol Endpoints**: GET, POST operations for symbol data
+- **Chart Data**: Historical data retrieval with various timeframes
+- **WebSocket Routes**: Real-time data streaming endpoints
+- **Error Handling**: 404, 400, 500 error scenarios
 
-## Mocking Strategy
+#### Database Tests
+- **Storage Operations**: CRUD operations for all entities
+- **Data Integrity**: Constraint validation, relationship testing
+- **Performance**: Query optimization, bulk operations
 
-### Frontend Mocks
-- **Canvas API**: Chart rendering mocks
-- **WebSocket**: Real-time data mocks
-- **ResizeObserver**: Component resizing mocks
-- **matchMedia**: Media query mocks
+### Mutation Testing
 
-### Backend Mocks
-- **Database**: In-memory storage mocks
-- **External APIs**: Third-party service mocks
-- **File System**: Asset and file mocks
+#### Test Quality Validation
+- **Code Coverage**: Ensuring tests actually validate logic
+- **Edge Cases**: Testing boundary conditions and error paths
+- **False Positives**: Identifying tests that pass incorrectly
+- **Test Effectiveness**: Measuring real test value vs. coverage metrics
 
-## Continuous Integration
+## Quality Metrics
 
-### CI/CD Pipeline (Future)
-```yaml
-# Example GitHub Actions workflow
-name: CI/CD Pipeline
-on: [push, pull_request]
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-      - run: npm ci
-      - run: npm run test:ci
-      - run: npm run lint
-      - run: npm run build
-```
+### Coverage Targets
+- **Statement Coverage**: >80%
+- **Branch Coverage**: >75%
+- **Function Coverage**: >85%
+- **Line Coverage**: >80%
+
+### SonarQube Quality Gates
+- **Bugs**: 0 critical/major bugs
+- **Vulnerabilities**: 0 security vulnerabilities
+- **Code Smells**: <5% technical debt ratio
+- **Duplicated Code**: <3% duplication
+- **Test Coverage**: >80% coverage
+
+### Mutation Testing Thresholds
+- **Mutation Score**: >80% (high quality)
+- **Survival Rate**: <20% (low surviving mutants)
+- **Timeout Factor**: 1.5x (performance consideration)
+
+## CI/CD Integration
+
+### GitHub Actions Workflow
+The CI/CD pipeline includes:
+1. **TypeScript Compilation**: Validates type safety
+2. **ESLint Analysis**: Code quality and style checks
+3. **Jest Unit Tests**: Comprehensive test execution
+4. **Stryker Mutation Testing**: Test quality validation
+5. **SonarQube Analysis**: Static code analysis
+6. **Coverage Reports**: Test coverage tracking
+7. **Artifact Generation**: Test reports and build assets
 
 ### Quality Gates
 - All tests must pass
-- Coverage must meet minimum thresholds
-- No ESLint errors
+- Coverage thresholds must be met
+- ESLint must pass with 0 warnings
 - SonarQube quality gate must pass
+- Mutation testing score must be >60%
 
-## Test Data Strategy
+## Running Tests
 
-### Dummy Data
-- **Chart Data**: Realistic OHLCV data generation
-- **Symbol Data**: Mock financial symbols
-- **User Data**: Test user accounts and preferences
-- **Market Data**: Simulated market conditions
+### Local Development
+```bash
+# Install dependencies
+npm install
 
-### Test Fixtures
-- **Consistent Data**: Predictable test data sets
-- **Edge Cases**: Boundary condition testing
-- **Error Scenarios**: Failure condition testing
+# Run quick test
+npm test
+
+# Run with coverage
+npm run test:coverage
+
+# Run full test suite
+chmod +x run-tests.sh
+./run-tests.sh
+```
+
+### CI/CD Environment
+```bash
+# Complete pipeline
+npm run test:ci
+npm run test:mutate
+npm run sonar
+```
+
+### SonarQube Setup
+```bash
+# Start SonarQube server
+docker run -d --name sonarqube -p 9000:9000 sonarqube:latest
+
+# Wait for server to start
+curl -f http://localhost:9000/api/system/status
+
+# Run analysis
+npm run sonar
+```
+
+## Test Writing Guidelines
+
+### Component Tests
+```typescript
+// Use React Testing Library
+import { render, screen, fireEvent } from '@testing-library/react';
+
+// Test user interactions
+fireEvent.click(screen.getByRole('button'));
+
+// Assert expected behavior
+expect(screen.getByText('Expected Text')).toBeInTheDocument();
+```
+
+### Service Tests
+```typescript
+// Mock external dependencies
+jest.mock('@/services/websocket-service');
+
+// Test async operations
+await expect(service.fetchData()).resolves.toEqual(expectedData);
+
+// Test error scenarios
+await expect(service.fetchData()).rejects.toThrow('Expected Error');
+```
+
+### Utility Tests
+```typescript
+// Test pure functions
+expect(ChartUtils.formatPrice(123.456)).toBe('123.46');
+
+// Test edge cases
+expect(ChartUtils.formatPrice(0)).toBe('0.00');
+expect(ChartUtils.formatPrice(-123.456)).toBe('-123.46');
+```
 
 ## Best Practices
 
-### Test Writing
-- **AAA Pattern**: Arrange, Act, Assert
-- **Clear Naming**: Descriptive test names
-- **Single Responsibility**: One assertion per test
-- **Mock External Dependencies**: Isolate units under test
+### Test Organization
+- Group related tests in describe blocks
+- Use descriptive test names
+- Follow AAA pattern (Arrange, Act, Assert)
+- Keep tests focused and independent
 
-### Code Quality
-- **Type Safety**: Comprehensive TypeScript usage
-- **Error Handling**: Proper error boundary testing
-- **Performance**: Memory leak and performance testing
-- **Accessibility**: A11y compliance testing
+### Mocking Strategy
+- Mock external dependencies
+- Use Jest mocks for third-party libraries
+- Mock API calls for consistent testing
+- Avoid mocking implementation details
+
+### Coverage Strategy
+- Aim for meaningful coverage, not just numbers
+- Test edge cases and error conditions
+- Use mutation testing to validate test quality
+- Focus on critical business logic
+
+### Performance
+- Use `beforeEach` for common setup
+- Clean up after tests (timers, DOM, etc.)
+- Optimize test execution time
+- Use test filtering for development
 
 ## Troubleshooting
 
 ### Common Issues
-- **Canvas Context**: Ensure proper mocking for chart tests
-- **Async Operations**: Use proper async/await patterns
-- **State Management**: Reset store state between tests
-- **DOM Cleanup**: Proper component unmounting
+1. **Tests timeout**: Increase timeout values, check async operations
+2. **Coverage gaps**: Add tests for uncovered branches
+3. **Mutation survivors**: Improve test assertions
+4. **SonarQube connection**: Verify server is running on port 9000
 
-### Debug Commands
+### Debug Tips
 ```bash
+# Run specific test file
+npm test -- chart-utils.test.ts
+
 # Run tests with verbose output
-npx jest --verbose
+npm test -- --verbose
 
-# Run tests with debugging
-npx jest --detectOpenHandles
+# Debug failing tests
+npm test -- --runInBand
 
-# Run specific test with debugging
-npx jest --testNamePattern="should render" --verbose
+# Check test coverage
+npm run test:coverage
 ```
 
 ## Reporting
 
-### Test Results
-- **Console Output**: Real-time test results
-- **HTML Coverage**: Visual coverage reports
-- **SonarQube Dashboard**: Comprehensive quality metrics
-- **CI/CD Reports**: Automated pipeline results
+### Test Reports
+- **HTML Coverage Report**: `coverage/lcov-report/index.html`
+- **Mutation Report**: `stryker-reports/mutation-report.html`
+- **ESLint Report**: `reports/eslint-report.json`
+- **SonarQube Dashboard**: `http://localhost:9000/dashboard`
 
-### Metrics Tracking
-- **Test Count**: Number of tests written
-- **Coverage Trends**: Coverage over time
-- **Quality Trends**: Code quality improvements
-- **Bug Detection**: Issues found and resolved
+### Metrics Dashboard
+- Test execution results
+- Coverage trends over time
+- Code quality metrics
+- Mutation testing scores
+- Performance benchmarks
+
+## Continuous Improvement
+
+### Regular Activities
+1. **Review test coverage** weekly
+2. **Analyze mutation testing** results
+3. **Update test cases** for new features
+4. **Refactor tests** for maintainability
+5. **Monitor quality metrics** trends
+
+### Quality Assurance
+- Regular code reviews include test quality
+- Peer testing of new features
+- Documentation updates with code changes
+- Performance impact assessment
+- Security vulnerability scanning
+
+This comprehensive testing strategy ensures high code quality, reliability, and maintainability of the Financial Chart Dashboard project.

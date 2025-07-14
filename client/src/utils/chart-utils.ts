@@ -1,192 +1,201 @@
-import { ChartDataPoint, VolumeDataPoint, TechnicalIndicator } from '@/types/chart-types';
+import { ChartDataPoint } from '@/types/chart-types';
 
 export class ChartUtils {
-  static formatPrice(price: number, decimals: number = 2): string {
-    return price.toLocaleString('en-US', {
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals
-    });
+  static formatPrice(price: number): string {
+    return price.toFixed(2);
   }
 
   static formatVolume(volume: number): string {
-    if (volume >= 1000000) {
-      return (volume / 1000000).toFixed(1) + 'M';
+    if (volume >= 1000000000) {
+      return `${(volume / 1000000000).toFixed(1)}B`;
+    } else if (volume >= 1000000) {
+      return `${(volume / 1000000).toFixed(1)}M`;
     } else if (volume >= 1000) {
-      return (volume / 1000).toFixed(1) + 'K';
+      return `${(volume / 1000).toFixed(1)}K`;
     }
     return volume.toString();
   }
 
-  static formatPercentage(value: number): string {
-    return (value > 0 ? '+' : '') + value.toFixed(2) + '%';
-  }
-
-  static formatTimestamp(timestamp: number): string {
-    return new Date(timestamp * 1000).toLocaleString();
-  }
-
-  static calculateMovingAverage(data: ChartDataPoint[], period: number): number[] {
-    if (data.length < period) return [];
-    
-    const ma: number[] = [];
-    for (let i = period - 1; i < data.length; i++) {
-      let sum = 0;
-      for (let j = 0; j < period; j++) {
-        sum += data[i - j].close;
-      }
-      ma.push(sum / period);
+  static formatMarketCap(marketCap: number): string {
+    if (marketCap >= 1000000000000) {
+      return `$${(marketCap / 1000000000000).toFixed(1)}T`;
+    } else if (marketCap >= 1000000000) {
+      return `$${(marketCap / 1000000000).toFixed(1)}B`;
+    } else if (marketCap >= 1000000) {
+      return `$${(marketCap / 1000000).toFixed(1)}M`;
+    } else if (marketCap >= 1000) {
+      return `$${(marketCap / 1000).toFixed(1)}K`;
     }
-    return ma;
+    return `$${marketCap.toFixed(0)}`;
+  }
+
+  static formatPercentage(percentage: number): string {
+    const sign = percentage > 0 ? '+' : '';
+    return `${sign}${percentage.toFixed(2)}%`;
+  }
+
+  static calculateChange(current: number, previous: number): { change: number; changePercent: number } {
+    const change = current - previous;
+    const changePercent = previous !== 0 ? (change / previous) * 100 : 0;
+    return { change, changePercent };
+  }
+
+  static getTimeframeMs(timeframe: string): number {
+    const timeframes: Record<string, number> = {
+      '1m': 60 * 1000,
+      '5m': 5 * 60 * 1000,
+      '15m': 15 * 60 * 1000,
+      '1h': 60 * 60 * 1000,
+      '4h': 4 * 60 * 60 * 1000,
+      '1d': 24 * 60 * 60 * 1000,
+      '1w': 7 * 24 * 60 * 60 * 1000,
+      '1y': 365 * 24 * 60 * 60 * 1000,
+    };
+    return timeframes[timeframe] || timeframes['1d'];
+  }
+
+  static isValidOHLCV(data: any): data is ChartDataPoint {
+    return (
+      typeof data === 'object' &&
+      typeof data.time === 'number' &&
+      typeof data.open === 'number' &&
+      typeof data.high === 'number' &&
+      typeof data.low === 'number' &&
+      typeof data.close === 'number' &&
+      typeof data.volume === 'number' &&
+      data.high >= data.low &&
+      data.high >= data.open &&
+      data.high >= data.close &&
+      data.low <= data.open &&
+      data.low <= data.close &&
+      data.volume >= 0
+    );
+  }
+
+  static generateTimeLabels(startTime: number, timeframe: string, count: number): string[] {
+    const labels: string[] = [];
+    const intervalMs = this.getTimeframeMs(timeframe);
+    
+    for (let i = 0; i < count; i++) {
+      const time = new Date((startTime + i * intervalMs / 1000) * 1000);
+      
+      if (timeframe.includes('m') || timeframe.includes('h')) {
+        labels.push(time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }));
+      } else if (timeframe === '1d' || timeframe === '1w') {
+        labels.push(time.toLocaleDateString([], { month: 'short', day: 'numeric' }));
+      } else {
+        labels.push(time.toLocaleDateString([], { year: 'numeric' }));
+      }
+    }
+    
+    return labels;
+  }
+
+  static normalizeDataForComparison(data: ChartDataPoint[], baseValue?: number): ChartDataPoint[] {
+    if (!data.length) return [];
+    
+    const base = baseValue || data[0].close;
+    return data.map(point => ({
+      ...point,
+      open: ((point.open - base) / base) * 100,
+      high: ((point.high - base) / base) * 100,
+      low: ((point.low - base) / base) * 100,
+      close: ((point.close - base) / base) * 100,
+    }));
+  }
+
+  static calculateSMA(data: ChartDataPoint[], period: number): number[] {
+    const sma: number[] = [];
+    
+    for (let i = 0; i < data.length; i++) {
+      if (i < period - 1) {
+        sma.push(0);
+      } else {
+        const sum = data.slice(i - period + 1, i + 1).reduce((acc, point) => acc + point.close, 0);
+        sma.push(sum / period);
+      }
+    }
+    
+    return sma;
   }
 
   static calculateRSI(data: ChartDataPoint[], period: number = 14): number[] {
-    if (data.length < period + 1) return [];
-    
     const rsi: number[] = [];
-    let gains = 0;
-    let losses = 0;
+    const gains: number[] = [];
+    const losses: number[] = [];
     
-    // Calculate initial average gain and loss
-    for (let i = 1; i <= period; i++) {
+    for (let i = 1; i < data.length; i++) {
       const change = data[i].close - data[i - 1].close;
-      if (change > 0) {
-        gains += change;
+      gains.push(change > 0 ? change : 0);
+      losses.push(change < 0 ? Math.abs(change) : 0);
+    }
+    
+    for (let i = 0; i < gains.length; i++) {
+      if (i < period - 1) {
+        rsi.push(0);
       } else {
-        losses += Math.abs(change);
+        const avgGain = gains.slice(i - period + 1, i + 1).reduce((a, b) => a + b) / period;
+        const avgLoss = losses.slice(i - period + 1, i + 1).reduce((a, b) => a + b) / period;
+        
+        if (avgLoss === 0) {
+          rsi.push(100);
+        } else {
+          const rs = avgGain / avgLoss;
+          rsi.push(100 - (100 / (1 + rs)));
+        }
       }
     }
     
-    let avgGain = gains / period;
-    let avgLoss = losses / period;
-    
-    // Calculate RSI for the rest of the data
-    for (let i = period; i < data.length; i++) {
-      const change = data[i].close - data[i - 1].close;
-      const gain = change > 0 ? change : 0;
-      const loss = change < 0 ? Math.abs(change) : 0;
-      
-      avgGain = (avgGain * (period - 1) + gain) / period;
-      avgLoss = (avgLoss * (period - 1) + loss) / period;
-      
-      const rs = avgGain / avgLoss;
-      const rsiValue = 100 - (100 / (1 + rs));
-      rsi.push(rsiValue);
-    }
-    
-    return rsi;
+    return [0, ...rsi]; // Add 0 for first data point
   }
 
-  static calculateMACD(data: ChartDataPoint[], fastPeriod: number = 12, slowPeriod: number = 26, signalPeriod: number = 9) {
-    if (data.length < slowPeriod) return { macd: [], signal: [], histogram: [] };
+  static detectPricePatterns(data: ChartDataPoint[]): { type: string; confidence: number }[] {
+    const patterns: { type: string; confidence: number }[] = [];
     
-    const fastEMA = this.calculateEMA(data.map(d => d.close), fastPeriod);
-    const slowEMA = this.calculateEMA(data.map(d => d.close), slowPeriod);
+    if (data.length < 20) return patterns;
     
-    const macdLine: number[] = [];
-    for (let i = 0; i < Math.min(fastEMA.length, slowEMA.length); i++) {
-      macdLine.push(fastEMA[i] - slowEMA[i]);
+    // Simple pattern detection examples
+    const recent = data.slice(-10);
+    const closes = recent.map(d => d.close);
+    
+    // Ascending triangle
+    const highs = recent.map(d => d.high);
+    const lows = recent.map(d => d.low);
+    
+    if (this.isAscendingTriangle(highs, lows)) {
+      patterns.push({ type: 'ascending-triangle', confidence: 0.7 });
     }
     
-    const signalLine = this.calculateEMA(macdLine, signalPeriod);
-    const histogram: number[] = [];
-    
-    for (let i = 0; i < Math.min(macdLine.length, signalLine.length); i++) {
-      histogram.push(macdLine[i] - signalLine[i]);
+    // Head and shoulders
+    if (this.isHeadAndShoulders(closes)) {
+      patterns.push({ type: 'head-and-shoulders', confidence: 0.8 });
     }
     
-    return { macd: macdLine, signal: signalLine, histogram };
+    return patterns;
   }
 
-  static calculateBollingerBands(data: ChartDataPoint[], period: number = 20, multiplier: number = 2) {
-    if (data.length < period) return { upper: [], middle: [], lower: [] };
+  private static isAscendingTriangle(highs: number[], lows: number[]): boolean {
+    // Simplified ascending triangle detection
+    const avgHigh = highs.reduce((a, b) => a + b) / highs.length;
+    const lowTrend = lows.slice(-5).every((low, i, arr) => i === 0 || low >= arr[i - 1]);
+    const highResistance = highs.slice(-5).every(high => Math.abs(high - avgHigh) < avgHigh * 0.02);
     
-    const middle = this.calculateMovingAverage(data, period);
-    const upper: number[] = [];
-    const lower: number[] = [];
-    
-    for (let i = period - 1; i < data.length; i++) {
-      let sum = 0;
-      for (let j = 0; j < period; j++) {
-        sum += Math.pow(data[i - j].close - middle[i - period + 1], 2);
-      }
-      const stdDev = Math.sqrt(sum / period);
-      const ma = middle[i - period + 1];
-      
-      upper.push(ma + (multiplier * stdDev));
-      lower.push(ma - (multiplier * stdDev));
-    }
-    
-    return { upper, middle, lower };
+    return lowTrend && highResistance;
   }
 
-  private static calculateEMA(data: number[], period: number): number[] {
-    if (data.length < period) return [];
+  private static isHeadAndShoulders(closes: number[]): boolean {
+    if (closes.length < 7) return false;
     
-    const multiplier = 2 / (period + 1);
-    const ema: number[] = [];
+    // Simplified head and shoulders detection
+    const mid = Math.floor(closes.length / 2);
+    const leftShoulder = closes.slice(0, mid - 1);
+    const head = closes.slice(mid - 1, mid + 2);
+    const rightShoulder = closes.slice(mid + 1);
     
-    // First EMA is SMA
-    let sum = 0;
-    for (let i = 0; i < period; i++) {
-      sum += data[i];
-    }
-    ema.push(sum / period);
+    const leftMax = Math.max(...leftShoulder);
+    const headMax = Math.max(...head);
+    const rightMax = Math.max(...rightShoulder);
     
-    // Calculate EMA for the rest
-    for (let i = period; i < data.length; i++) {
-      const emaValue = (data[i] - ema[ema.length - 1]) * multiplier + ema[ema.length - 1];
-      ema.push(emaValue);
-    }
-    
-    return ema;
-  }
-
-  static getIndicatorColor(type: string): string {
-    const colors: Record<string, string> = {
-      'MA': '#3B82F6',
-      'RSI': '#F59E0B',
-      'MACD': '#8B5CF6',
-      'BB': '#10B981',
-      'EMA': '#EF4444',
-      'SMA': '#06B6D4',
-    };
-    return colors[type] || '#6B7280';
-  }
-
-  static generateIndicatorId(): string {
-    return 'indicator_' + Math.random().toString(36).substr(2, 9);
-  }
-
-  static validateIndicatorParameters(type: string, parameters: any): boolean {
-    switch (type) {
-      case 'MA':
-      case 'EMA':
-      case 'SMA':
-        return parameters.period && parameters.period > 0;
-      case 'RSI':
-        return parameters.period && parameters.period > 0 && parameters.period <= 100;
-      case 'MACD':
-        return parameters.fast && parameters.slow && parameters.signal &&
-               parameters.fast > 0 && parameters.slow > 0 && parameters.signal > 0 &&
-               parameters.fast < parameters.slow;
-      case 'BB':
-        return parameters.period && parameters.multiplier &&
-               parameters.period > 0 && parameters.multiplier > 0;
-      default:
-        return false;
-    }
-  }
-
-  static formatMarketCap(value: number): string {
-    if (value >= 1e12) {
-      return (value / 1e12).toFixed(1) + 'T';
-    } else if (value >= 1e9) {
-      return (value / 1e9).toFixed(1) + 'B';
-    } else if (value >= 1e6) {
-      return (value / 1e6).toFixed(1) + 'M';
-    } else if (value >= 1e3) {
-      return (value / 1e3).toFixed(1) + 'K';
-    }
-    return value.toString();
+    return headMax > leftMax && headMax > rightMax && Math.abs(leftMax - rightMax) < leftMax * 0.05;
   }
 }
