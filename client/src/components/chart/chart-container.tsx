@@ -10,6 +10,8 @@ export function ChartContainer() {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartDataRef = useRef<ChartDataPoint[]>([]);
   const animationRef = useRef<number>();
+  const scrollOffsetRef = useRef<number>(0);
+  const isScrollingRef = useRef<boolean>(false);
   const chartService = ChartService.getInstance();
 
   const getCurrentTime = () => {
@@ -23,15 +25,22 @@ export function ChartContainer() {
     close: selectedSymbol?.price ? selectedSymbol.price.toFixed(2) : '175.43',
   };
 
-  // Custom chart drawing function
+  // Custom chart drawing function with HD support and scrolling
   const drawChart = useCallback((canvas: HTMLCanvasElement, data: ChartDataPoint[]) => {
     const ctx = canvas.getContext('2d');
     if (!ctx || !data.length) return;
 
-    const { width, height } = canvas;
+    const rect = canvas.getBoundingClientRect();
+    const pixelRatio = window.devicePixelRatio || 1;
+    const width = rect.width;
+    const height = rect.height;
     const padding = 60;
     const chartWidth = width - 2 * padding;
     const chartHeight = height - 2 * padding;
+    
+    // Enable HD rendering
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
 
     // Clear canvas
     ctx.clearRect(0, 0, width, height);
@@ -93,20 +102,26 @@ export function ChartContainer() {
       ctx.fillText(timeString, x, height - padding + 20);
     }
 
+    // Calculate visible data range with scroll offset
+    const visibleDataCount = Math.min(data.length, Math.floor(chartWidth / 8)); // Show reasonable number of candles
+    const maxScrollOffset = Math.max(0, data.length - visibleDataCount);
+    const currentScrollOffset = Math.min(scrollOffsetRef.current, maxScrollOffset);
+    const visibleData = data.slice(currentScrollOffset, currentScrollOffset + visibleDataCount);
+
     // Draw chart based on type
     if (config.chartType === 'candlestick') {
       // Draw candlesticks
-      data.forEach((point, index) => {
-        const x = padding + (index * chartWidth) / (data.length - 1);
+      visibleData.forEach((point, index) => {
+        const x = padding + (index * chartWidth) / (visibleData.length - 1);
         const openY = padding + ((maxPrice - point.open) * chartHeight) / priceRange;
         const highY = padding + ((maxPrice - point.high) * chartHeight) / priceRange;
         const lowY = padding + ((maxPrice - point.low) * chartHeight) / priceRange;
         const closeY = padding + ((maxPrice - point.close) * chartHeight) / priceRange;
 
         const isUp = point.close > point.open;
-        const candleWidth = Math.max(2, chartWidth / data.length * 0.8);
+        const candleWidth = Math.max(3, chartWidth / visibleData.length * 0.8);
 
-        // Draw wick
+        // Draw wick with HD quality
         ctx.strokeStyle = isUp ? '#22c55e' : '#ef4444';
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -117,17 +132,17 @@ export function ChartContainer() {
         // Draw candle body
         ctx.fillStyle = isUp ? '#22c55e' : '#ef4444';
         const bodyTop = Math.min(openY, closeY);
-        const bodyHeight = Math.abs(closeY - openY);
+        const bodyHeight = Math.max(1, Math.abs(closeY - openY));
         ctx.fillRect(x - candleWidth / 2, bodyTop, candleWidth, bodyHeight);
       });
     } else if (config.chartType === 'line') {
-      // Draw line chart
+      // Draw line chart with HD quality
       ctx.strokeStyle = '#3b82f6';
       ctx.lineWidth = 2;
       ctx.beginPath();
       
-      data.forEach((point, index) => {
-        const x = padding + (index * chartWidth) / (data.length - 1);
+      visibleData.forEach((point, index) => {
+        const x = padding + (index * chartWidth) / (visibleData.length - 1);
         const y = padding + ((maxPrice - point.close) * chartHeight) / priceRange;
         
         if (index === 0) {
@@ -139,15 +154,15 @@ export function ChartContainer() {
       
       ctx.stroke();
     } else if (config.chartType === 'area') {
-      // Draw area chart
+      // Draw area chart with HD quality
       ctx.fillStyle = 'rgba(59, 130, 246, 0.2)';
       ctx.strokeStyle = '#3b82f6';
       ctx.lineWidth = 2;
       
       ctx.beginPath();
       
-      data.forEach((point, index) => {
-        const x = padding + (index * chartWidth) / (data.length - 1);
+      visibleData.forEach((point, index) => {
+        const x = padding + (index * chartWidth) / (visibleData.length - 1);
         const y = padding + ((maxPrice - point.close) * chartHeight) / priceRange;
         
         if (index === 0) {
@@ -167,8 +182,8 @@ export function ChartContainer() {
       
       // Draw the line on top
       ctx.beginPath();
-      data.forEach((point, index) => {
-        const x = padding + (index * chartWidth) / (data.length - 1);
+      visibleData.forEach((point, index) => {
+        const x = padding + (index * chartWidth) / (visibleData.length - 1);
         const y = padding + ((maxPrice - point.close) * chartHeight) / priceRange;
         
         if (index === 0) {
@@ -184,16 +199,34 @@ export function ChartContainer() {
     if (config.showVolume) {
       const volumeHeight = chartHeight * 0.2;
       const volumeY = height - padding - volumeHeight;
-      const maxVolume = Math.max(...data.map(d => d.volume));
+      const maxVolume = Math.max(...visibleData.map(d => d.volume));
       
-      data.forEach((point, index) => {
-        const x = padding + (index * chartWidth) / (data.length - 1);
+      visibleData.forEach((point, index) => {
+        const x = padding + (index * chartWidth) / (visibleData.length - 1);
         const barHeight = (point.volume / maxVolume) * volumeHeight;
-        const barWidth = chartWidth / data.length * 0.8;
+        const barWidth = Math.max(2, chartWidth / visibleData.length * 0.8);
         
         ctx.fillStyle = point.close > point.open ? '#22c55e' : '#ef4444';
         ctx.fillRect(x - barWidth / 2, volumeY + volumeHeight - barHeight, barWidth, barHeight);
       });
+    }
+
+    // Draw scroll indicator
+    if (data.length > visibleDataCount) {
+      const scrollbarHeight = 4;
+      const scrollbarY = height - padding + 40;
+      const scrollbarWidth = chartWidth;
+      const scrollProgress = currentScrollOffset / maxScrollOffset;
+      
+      // Draw scrollbar track
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(padding, scrollbarY, scrollbarWidth, scrollbarHeight);
+      
+      // Draw scrollbar thumb
+      const thumbWidth = (visibleDataCount / data.length) * scrollbarWidth;
+      const thumbX = padding + (scrollProgress * (scrollbarWidth - thumbWidth));
+      ctx.fillStyle = '#64748b';
+      ctx.fillRect(thumbX, scrollbarY, thumbWidth, scrollbarHeight);
     }
   }, [config.chartType, config.showVolume]);
 
@@ -204,20 +237,86 @@ export function ChartContainer() {
     const canvas = canvasRef.current;
     const container = containerRef.current;
     
-    // Set canvas size
+    // Set canvas size with HD pixel ratio
     const resizeCanvas = () => {
       const rect = container.getBoundingClientRect();
-      canvas.width = rect.width;
-      canvas.height = rect.height;
+      const pixelRatio = window.devicePixelRatio || 1;
+      
+      // Set actual canvas size in memory (HD)
+      canvas.width = rect.width * pixelRatio;
+      canvas.height = rect.height * pixelRatio;
+      
+      // Set display size (CSS pixels)
       canvas.style.width = `${rect.width}px`;
       canvas.style.height = `${rect.height}px`;
+      
+      // Scale canvas context for HD rendering
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.scale(pixelRatio, pixelRatio);
+      }
     };
 
     resizeCanvas();
     
     // Handle resize
-    const resizeObserver = new ResizeObserver(resizeCanvas);
+    const resizeObserver = new ResizeObserver(() => {
+      resizeCanvas();
+      // Redraw chart after resize
+      if (chartDataRef.current.length > 0) {
+        drawChart(canvas, chartDataRef.current);
+      }
+    });
     resizeObserver.observe(container);
+
+    // Mouse event handlers for scrolling
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const data = chartDataRef.current;
+      if (data.length === 0) return;
+      
+      const visibleDataCount = Math.min(data.length, Math.floor((container.offsetWidth - 120) / 8));
+      const maxScrollOffset = Math.max(0, data.length - visibleDataCount);
+      
+      const scrollSpeed = 3;
+      const deltaX = e.deltaX || e.deltaY;
+      scrollOffsetRef.current = Math.max(0, Math.min(maxScrollOffset, scrollOffsetRef.current + (deltaX > 0 ? scrollSpeed : -scrollSpeed)));
+      
+      drawChart(canvas, data);
+    };
+
+    const handleMouseDown = (e: MouseEvent) => {
+      isScrollingRef.current = true;
+      const startX = e.clientX;
+      const startScrollOffset = scrollOffsetRef.current;
+      
+      const handleMouseMove = (e: MouseEvent) => {
+        if (!isScrollingRef.current) return;
+        
+        const data = chartDataRef.current;
+        const visibleDataCount = Math.min(data.length, Math.floor((container.offsetWidth - 120) / 8));
+        const maxScrollOffset = Math.max(0, data.length - visibleDataCount);
+        const dragSpeed = 0.5;
+        
+        const deltaX = e.clientX - startX;
+        scrollOffsetRef.current = Math.max(0, Math.min(maxScrollOffset, startScrollOffset - deltaX * dragSpeed));
+        
+        drawChart(canvas, data);
+      };
+      
+      const handleMouseUp = () => {
+        isScrollingRef.current = false;
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+      
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    };
+
+    // Add event listeners
+    canvas.addEventListener('wheel', handleWheel, { passive: false });
+    canvas.addEventListener('mousedown', handleMouseDown);
 
     // Load and draw chart data
     const loadData = async () => {
@@ -229,6 +328,7 @@ export function ChartContainer() {
         );
         
         chartDataRef.current = chartData;
+        scrollOffsetRef.current = Math.max(0, chartData.length - 50); // Start near the end
         drawChart(canvas, chartData);
       } catch (error) {
         console.error('Error loading chart data:', error);
@@ -239,6 +339,8 @@ export function ChartContainer() {
 
     return () => {
       resizeObserver.disconnect();
+      canvas.removeEventListener('wheel', handleWheel);
+      canvas.removeEventListener('mousedown', handleMouseDown);
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
@@ -299,22 +401,29 @@ export function ChartContainer() {
         </div>
       </div>
 
-      {/* Chart Canvas */}
-      <div ref={containerRef} id="chart-container" className="w-full h-full bg-slate-900 relative">
-        {isLoading ? (
-          <div className="w-full h-full flex items-center justify-center">
+      {/* Chart Canvas - Always Display */}
+      <div ref={containerRef} id="chart-container" className="w-full h-full bg-slate-900 relative overflow-hidden">
+        <canvas
+          ref={canvasRef}
+          className="w-full h-full cursor-grab active:cursor-grabbing"
+          style={{ display: 'block' }}
+        />
+        
+        {isLoading && (
+          <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent mx-auto mb-4"></div>
               <h3 className="text-lg font-medium text-slate-400 mb-2">Loading Chart...</h3>
-              <p className="text-sm text-slate-500">Fetching market data...</p>
+              <p className="text-sm text-slate-500">Generating market data...</p>
             </div>
           </div>
-        ) : (
-          <canvas
-            ref={canvasRef}
-            className="w-full h-full"
-            style={{ display: 'block' }}
-          />
+        )}
+        
+        {/* Scroll instruction overlay */}
+        {!isLoading && (
+          <div className="absolute top-4 right-4 bg-black/60 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">
+            Mouse wheel or drag to scroll
+          </div>
         )}
       </div>
     </div>
