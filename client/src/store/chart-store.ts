@@ -35,6 +35,12 @@ interface ChartStore {
   // Chart instance management
   chartInstance: any;
   setChartInstance: (instance: any) => void;
+  
+  // Drawing actions
+  addDrawingObject: (object: DrawingObject) => void;
+  updateDrawingObject: (id: string, updates: Partial<DrawingObject>) => void;
+  removeDrawingObject: (id: string) => void;
+  clearDrawingObjects: () => void;
 }
 
 const defaultConfig: ChartConfig = {
@@ -46,6 +52,7 @@ const defaultConfig: ChartConfig = {
   indicators: [],
   showVolume: true,
   showCrosshair: true,
+  drawingObjects: [],
 };
 
 export const useChartStore = create<ChartStore>((set, get) => ({
@@ -137,4 +144,32 @@ export const useChartStore = create<ChartStore>((set, get) => ({
   
   // Chart instance management
   setChartInstance: (instance) => set({ chartInstance: instance }),
+  
+  // Drawing actions
+  addDrawingObject: (object) => set((state) => ({
+    config: {
+      ...state.config,
+      drawingObjects: [...state.config.drawingObjects, object],
+    },
+  })),
+  updateDrawingObject: (id, updates) => set((state) => ({
+    config: {
+      ...state.config,
+      drawingObjects: state.config.drawingObjects.map(obj => 
+        obj.id === id ? { ...obj, ...updates } : obj
+      ),
+    },
+  })),
+  removeDrawingObject: (id) => set((state) => ({
+    config: {
+      ...state.config,
+      drawingObjects: state.config.drawingObjects.filter(obj => obj.id !== id),
+    },
+  })),
+  clearDrawingObjects: () => set((state) => ({
+    config: {
+      ...state.config,
+      drawingObjects: [],
+    },
+  })),
 }));

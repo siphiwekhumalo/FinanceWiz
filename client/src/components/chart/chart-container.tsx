@@ -3,10 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useChartStore } from '@/store/chart-store';
 import { ChartUtils } from '@/utils/chart-utils';
 import { ChartService } from '@/services/chart-service';
-import { ChartDataPoint } from '@/types/chart-types';
+import { ChartDataPoint, DrawingObject } from '@/types/chart-types';
+import { nanoid } from 'nanoid';
 
 export function ChartContainer() {
-  const { isLoading, selectedSymbol, isConnected, config, setChartInstance } = useChartStore();
+  const { isLoading, selectedSymbol, isConnected, config, setChartInstance, addDrawingObject, updateDrawingObject } = useChartStore();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const chartDataRef = useRef<ChartDataPoint[]>([]);
@@ -19,11 +20,173 @@ export function ChartContainer() {
   const velocityRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const [ohlcPosition, setOhlcPosition] = useState({ x: 20, y: 20 });
   const [showHelpOverlay, setShowHelpOverlay] = useState(true);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [currentDrawingObject, setCurrentDrawingObject] = useState<DrawingObject | null>(null);
+  const [showTextInput, setShowTextInput] = useState(false);
+  const [textInputValue, setTextInputValue] = useState('');
+  const [pendingTextObject, setPendingTextObject] = useState<DrawingObject | null>(null);
   const chartService = ChartService.getInstance();
 
   const getCurrentTime = () => {
     return new Date().toLocaleTimeString();
   };
+
+  // Convert canvas coordinates to chart data coordinates
+  const canvasToChartCoords = useCallback((canvasX: number, canvasY: number, data: ChartDataPoint[]) => {
+    const canvas = canvasRef.current;
+    if (!canvas || !data.length) return null;
+
+    const rect = canvas.getBoundingClientRect();
+    const { width, height } = canvas;
+    const padding = 40;
+    const chartWidth = width - padding * 2;
+    const chartHeight = height - padding * 2;
+
+    // Calculate price range
+    const prices = data.flatMap(d => [d.open, d.high, d.low, d.close]);
+    const minPrice = Math.min(...prices);
+    const maxPrice = Math.max(...prices);
+    const priceRange = maxPrice - minPrice;
+
+    // Calculate time and price from canvas coordinates
+    const normalizedX = (canvasX - padding) / chartWidth;
+    const normalizedY = (canvasY - padding) / chartHeight;
+    
+    const price = maxPrice - (normalizedY * priceRange);
+    const timeIndex = Math.floor(normalizedX * (data.length - 1));
+    const time = data[timeIndex]?.time || Date.now() / 1000;
+
+    return { x: canvasX, y: canvasY, price, time };
+  }, []);
+
+  // Convert chart data coordinates to canvas coordinates
+  const chartToCanvasCoords = useCallback((price: number, time: number, data: ChartDataPoint[]) => {
+    const canvas = canvasRef.current;
+    if (!canvas || !data.length) return null;
+
+    const { width, height } = canvas;
+    const padding = 40;
+    const chartWidth = width - padding * 2;
+    const chartHeight = height - padding * 2;
+
+    // Calculate price range
+    const prices = data.flatMap(d => [d.open, d.high, d.low, d.close]);
+    const minPrice = Math.min(...prices);
+    const maxPrice = Math.max(...prices);
+    const priceRange = maxPrice - minPrice;
+
+    // Find closest time index
+    const timeIndex = data.findIndex(d => d.time >= time);
+    const normalizedX = timeIndex / (data.length - 1);
+    const normalizedY = (maxPrice - price) / priceRange;
+
+    return {
+      x: padding + (normalizedX * chartWidth),
+      y: padding + (normalizedY * chartHeight)
+    };
+  }, []);
+
+  // Handle mouse down for drawing
+  const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas || config.selectedTool === 'cursor') return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    const chartCoords = canvasToChartCoords(x, y, chartDataRef.current);
+    if (!chartCoords) return;
+
+    if (config.selectedTool === 'text') {
+      // Handle text tool differently - show input dialog
+      const textObject: DrawingObject = {
+        id: nanoid(),
+        type: 'text',
+        points: [chartCoords],
+        color: '#10b981',
+        lineWidth: 2,
+        text: '',
+        completed: false,
+      };
+      setPendingTextObject(textObject);
+      setShowTextInput(true);
+      return;
+    }
+
+    const newDrawingObject: DrawingObject = {
+      id: nanoid(),
+      type: config.selectedTool,
+      points: [chartCoords],
+      color: '#10b981',
+      lineWidth: 2,
+      completed: false,
+    };
+
+    setCurrentDrawingObject(newDrawingObject);
+    setIsDrawing(true);
+  }, [config.selectedTool, canvasToChartCoords]);
+
+  // Handle mouse move for drawing
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDrawing || !currentDrawingObject) return;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    const chartCoords = canvasToChartCoords(x, y, chartDataRef.current);
+    if (!chartCoords) return;
+
+    const updatedObject = {
+      ...currentDrawingObject,
+      points: currentDrawingObject.points.length === 1 
+        ? [currentDrawingObject.points[0], chartCoords]
+        : [...currentDrawingObject.points.slice(0, -1), chartCoords]
+    };
+
+    setCurrentDrawingObject(updatedObject);
+  }, [isDrawing, currentDrawingObject, canvasToChartCoords]);
+
+  // Handle mouse up for drawing
+  const handleMouseUp = useCallback(() => {
+    if (!isDrawing || !currentDrawingObject) return;
+
+    const completedObject = {
+      ...currentDrawingObject,
+      completed: true,
+    };
+
+    addDrawingObject(completedObject);
+    setCurrentDrawingObject(null);
+    setIsDrawing(false);
+  }, [isDrawing, currentDrawingObject, addDrawingObject]);
+
+  // Handle text input completion
+  const handleTextInputSubmit = useCallback(() => {
+    if (!pendingTextObject || !textInputValue.trim()) return;
+
+    const completedTextObject = {
+      ...pendingTextObject,
+      text: textInputValue,
+      completed: true,
+    };
+
+    addDrawingObject(completedTextObject);
+    setPendingTextObject(null);
+    setTextInputValue('');
+    setShowTextInput(false);
+  }, [pendingTextObject, textInputValue, addDrawingObject]);
+
+  // Handle text input cancel
+  const handleTextInputCancel = useCallback(() => {
+    setPendingTextObject(null);
+    setTextInputValue('');
+    setShowTextInput(false);
+  }, []);
 
   const mockOHLC = {
     open: selectedSymbol?.price ? (selectedSymbol.price * 0.995).toFixed(2) : '174.22',
@@ -31,6 +194,107 @@ export function ChartContainer() {
     low: selectedSymbol?.price ? (selectedSymbol.price * 0.985).toFixed(2) : '173.45',
     close: selectedSymbol?.price ? selectedSymbol.price.toFixed(2) : '175.43',
   };
+
+  // Draw all drawing objects
+  const drawDrawingObjects = useCallback((ctx: CanvasRenderingContext2D, data: ChartDataPoint[]) => {
+    const allObjects = [...config.drawingObjects];
+    if (currentDrawingObject) {
+      allObjects.push(currentDrawingObject);
+    }
+
+    allObjects.forEach(obj => {
+      if (obj.points.length < 2) return;
+
+      ctx.strokeStyle = obj.color;
+      ctx.lineWidth = obj.lineWidth;
+      ctx.lineCap = 'round';
+
+      switch (obj.type) {
+        case 'trendline':
+          drawTrendline(ctx, obj, data);
+          break;
+        case 'rectangle':
+          drawRectangle(ctx, obj, data);
+          break;
+        case 'fibonacci':
+          drawFibonacci(ctx, obj, data);
+          break;
+        case 'text':
+          drawText(ctx, obj, data);
+          break;
+      }
+    });
+  }, [config.drawingObjects, currentDrawingObject]);
+
+  // Draw trendline
+  const drawTrendline = useCallback((ctx: CanvasRenderingContext2D, obj: DrawingObject, data: ChartDataPoint[]) => {
+    const start = chartToCanvasCoords(obj.points[0].price, obj.points[0].time, data);
+    const end = chartToCanvasCoords(obj.points[1].price, obj.points[1].time, data);
+    
+    if (!start || !end) return;
+
+    ctx.beginPath();
+    ctx.moveTo(start.x, start.y);
+    ctx.lineTo(end.x, end.y);
+    ctx.stroke();
+  }, [chartToCanvasCoords]);
+
+  // Draw rectangle
+  const drawRectangle = useCallback((ctx: CanvasRenderingContext2D, obj: DrawingObject, data: ChartDataPoint[]) => {
+    const start = chartToCanvasCoords(obj.points[0].price, obj.points[0].time, data);
+    const end = chartToCanvasCoords(obj.points[1].price, obj.points[1].time, data);
+    
+    if (!start || !end) return;
+
+    const width = end.x - start.x;
+    const height = end.y - start.y;
+
+    ctx.strokeRect(start.x, start.y, width, height);
+  }, [chartToCanvasCoords]);
+
+  // Draw fibonacci retracement
+  const drawFibonacci = useCallback((ctx: CanvasRenderingContext2D, obj: DrawingObject, data: ChartDataPoint[]) => {
+    const start = chartToCanvasCoords(obj.points[0].price, obj.points[0].time, data);
+    const end = chartToCanvasCoords(obj.points[1].price, obj.points[1].time, data);
+    
+    if (!start || !end) return;
+
+    const fibLevels = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
+    const priceRange = obj.points[1].price - obj.points[0].price;
+
+    fibLevels.forEach((level, index) => {
+      const price = obj.points[0].price + (priceRange * level);
+      const levelStart = chartToCanvasCoords(price, obj.points[0].time, data);
+      const levelEnd = chartToCanvasCoords(price, obj.points[1].time, data);
+      
+      if (!levelStart || !levelEnd) return;
+
+      ctx.globalAlpha = 0.7;
+      ctx.strokeStyle = index === 0 || index === fibLevels.length - 1 ? obj.color : `${obj.color}80`;
+      ctx.beginPath();
+      ctx.moveTo(levelStart.x, levelStart.y);
+      ctx.lineTo(levelEnd.x, levelEnd.y);
+      ctx.stroke();
+
+      // Draw level label
+      ctx.fillStyle = obj.color;
+      ctx.font = '12px monospace';
+      ctx.fillText(`${(level * 100).toFixed(1)}%`, levelEnd.x + 5, levelEnd.y - 5);
+    });
+
+    ctx.globalAlpha = 1;
+  }, [chartToCanvasCoords]);
+
+  // Draw text annotation
+  const drawText = useCallback((ctx: CanvasRenderingContext2D, obj: DrawingObject, data: ChartDataPoint[]) => {
+    const position = chartToCanvasCoords(obj.points[0].price, obj.points[0].time, data);
+    
+    if (!position) return;
+
+    ctx.fillStyle = obj.color;
+    ctx.font = '14px Arial';
+    ctx.fillText(obj.text || 'Text', position.x, position.y);
+  }, [chartToCanvasCoords]);
 
   // Custom chart drawing function with HD support and scrolling
   const drawChart = useCallback((canvas: HTMLCanvasElement, data: ChartDataPoint[]) => {
@@ -322,6 +586,9 @@ export function ChartContainer() {
       });
     }
 
+    // Draw drawing objects
+    drawDrawingObjects(ctx, data);
+
     // Draw scroll indicator
     if (data.length > visibleDataCount) {
       const scrollbarHeight = 4;
@@ -339,7 +606,7 @@ export function ChartContainer() {
       ctx.fillStyle = '#64748b';
       ctx.fillRect(thumbX, scrollbarY, thumbWidth, scrollbarHeight);
     }
-  }, [config.chartType, config.showVolume]);
+  }, [config.chartType, config.showVolume, drawDrawingObjects]);
 
   // Initialize canvas and load data
   useEffect(() => {
@@ -632,8 +899,13 @@ export function ChartContainer() {
       <div ref={containerRef} id="chart-container" className="w-full h-full bg-slate-900 relative overflow-hidden">
         <canvas
           ref={canvasRef}
-          className="w-full h-full cursor-grab active:cursor-grabbing focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded-sm"
+          className={`w-full h-full focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded-sm ${
+            config.selectedTool === 'cursor' ? 'cursor-grab active:cursor-grabbing' : 'cursor-crosshair'
+          }`}
           style={{ display: 'block' }}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
         />
         
         {isLoading && (
@@ -714,6 +986,57 @@ export function ChartContainer() {
                   ×
                 </motion.button>
               </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Text Input Dialog */}
+        <AnimatePresence>
+          {showTextInput && (
+            <motion.div 
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <motion.div 
+                className="bg-slate-800 border border-slate-600 rounded-lg p-6 min-w-[300px]"
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+              >
+                <h3 className="text-lg font-medium text-white mb-4">Add Text Annotation</h3>
+                <input
+                  type="text"
+                  value={textInputValue}
+                  onChange={(e) => setTextInputValue(e.target.value)}
+                  placeholder="Enter text..."
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleTextInputSubmit();
+                    } else if (e.key === 'Escape') {
+                      handleTextInputCancel();
+                    }
+                  }}
+                />
+                <div className="flex justify-end space-x-2 mt-4">
+                  <button
+                    onClick={handleTextInputCancel}
+                    className="px-4 py-2 text-slate-400 hover:text-white transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleTextInputSubmit}
+                    disabled={!textInputValue.trim()}
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Add Text
+                  </button>
+                </div>
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>

@@ -67,6 +67,22 @@ export type Timeframe = '1m' | '5m' | '15m' | '1h' | '4h' | '1d' | '1w' | '1y';
 export type DataSource = 'dummy' | 'real';
 export type DrawingTool = 'cursor' | 'trendline' | 'fibonacci' | 'rectangle' | 'text';
 
+export interface DrawingObject {
+  id: string;
+  type: DrawingTool;
+  points: Array<{ x: number; y: number; price: number; time: number }>;
+  color: string;
+  lineWidth: number;
+  text?: string;
+  completed: boolean;
+}
+
+export interface FibonacciLevel {
+  level: number;
+  percentage: number;
+  color: string;
+}
+
 export interface ChartConfig {
   symbol: string;
   chartType: ChartType;
@@ -76,6 +92,7 @@ export interface ChartConfig {
   indicators: TechnicalIndicator[];
   showVolume: boolean;
   showCrosshair: boolean;
+  drawingObjects: DrawingObject[];
 }
 
 export interface PriceUpdate {
