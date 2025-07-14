@@ -15,41 +15,41 @@ export function ChartToolbar() {
   const { isFullscreen, setFullscreen } = useSettingsStore();
 
   return (
-    <div className="toolbar flex items-center justify-between p-3 shadow-sm">
+    <div className="flex items-center justify-between bg-slate-800 border-b border-slate-700 p-2">
       {/* Left side - Symbol, chart type, timeframe, indicators and drawing tools */}
-      <div className="flex items-center space-x-4">
+      <div className="flex items-center space-x-3">
         <SymbolDropdown />
         
-        <div className="w-px h-5 bg-slate-600/50" />
+        <div className="w-px h-4 bg-slate-600" />
         
         <ChartTypeDropdown />
         
-        <div className="w-px h-5 bg-slate-600/50" />
+        <div className="w-px h-4 bg-slate-600" />
         
         <TimeframeDropdown />
         
-        <div className="w-px h-5 bg-slate-600/50" />
+        <div className="w-px h-4 bg-slate-600" />
         
         <IndicatorsDropdown />
         
         <DrawingToolsDropdown />
         
-        <div className="w-px h-5 bg-slate-600/50" />
+        <div className="w-px h-4 bg-slate-600" />
         
         <ComparisonDropdown />
         
-        <div className="w-px h-5 bg-slate-600/50" />
+        <div className="w-px h-4 bg-slate-600" />
         
         <DataSourceToggle />
       </div>
 
       {/* Right side - Chart controls */}
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center space-x-1">
         <Button
           variant="ghost"
           size="sm"
           onClick={() => {/* TODO: Implement zoom in */}}
-          className="button-premium px-3 py-2 h-9 rounded-lg"
+          className="px-2 py-1 h-8"
           title="Zoom In"
         >
           <ZoomIn className="h-4 w-4" />
@@ -59,7 +59,7 @@ export function ChartToolbar() {
           variant="ghost"
           size="sm"
           onClick={() => {/* TODO: Implement zoom out */}}
-          className="button-premium px-3 py-2 h-9 rounded-lg"
+          className="px-2 py-1 h-8"
           title="Zoom Out"
         >
           <ZoomOut className="h-4 w-4" />
@@ -69,49 +69,41 @@ export function ChartToolbar() {
           variant="ghost"
           size="sm"
           onClick={resetZoom}
-          className="button-premium px-3 py-2 h-9 rounded-lg"
+          className="px-2 py-1 h-8"
           title="Reset Zoom"
         >
           <RotateCcw className="h-4 w-4" />
         </Button>
 
-        <div className="w-px h-5 bg-slate-600/50 mx-2" />
+        <div className="w-px h-4 bg-slate-600 mx-1" />
         
         <Button
-          variant="ghost"
+          variant={config.showVolume ? "default" : "ghost"}
           size="sm"
           onClick={toggleVolume}
-          className={`button-premium px-3 py-2 h-9 rounded-lg ${
-            config.showVolume 
-              ? 'bg-blue-600/20 border-blue-500/50 text-blue-400' 
-              : ''
-          }`}
+          className="px-2 py-1 h-8"
           title="Toggle Volume"
         >
           <Volume2 className="h-4 w-4" />
         </Button>
         
         <Button
-          variant="ghost"
+          variant={config.showCrosshair ? "default" : "ghost"}
           size="sm"
           onClick={toggleCrosshair}
-          className={`button-premium px-3 py-2 h-9 rounded-lg ${
-            config.showCrosshair 
-              ? 'bg-blue-600/20 border-blue-500/50 text-blue-400' 
-              : ''
-          }`}
+          className="px-2 py-1 h-8"
           title="Toggle Crosshair"
         >
           <Crosshair className="h-4 w-4" />
         </Button>
         
-        <div className="w-px h-5 bg-slate-600/50 mx-2" />
+        <div className="w-px h-4 bg-slate-600 mx-1" />
         
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setFullscreen(!isFullscreen)}
-          className="button-premium px-3 py-2 h-9 rounded-lg"
+          className="px-2 py-1 h-8"
           title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
         >
           {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}

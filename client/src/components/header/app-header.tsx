@@ -1,12 +1,9 @@
-import { Palette, Expand, Settings, TrendingUp, Activity } from 'lucide-react';
+import { Palette, Expand, Settings } from 'lucide-react';
 import { useSettingsStore } from '@/store/settings-store';
-import { useChartStore } from '@/store/chart-store';
 import { Button } from '@/components/ui/button';
-import { motion } from 'framer-motion';
 
 export function AppHeader() {
   const { whiteLabel, setSettingsOpen, setFullscreen, isFullscreen } = useSettingsStore();
-  const { selectedSymbol, config } = useChartStore();
 
   const handleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -19,65 +16,48 @@ export function AppHeader() {
   };
 
   return (
-    <header className="toolbar bg-slate-800 border-b border-slate-700 shadow-lg">
+    <header className="bg-slate-800 border-b border-slate-700">
       <div className="flex items-center justify-between px-6 py-4">
         <div className="flex items-center space-x-4">
-          <motion.div 
-            className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <TrendingUp className="h-6 w-6 text-white" />
-          </motion.div>
-          
+          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+            <i className="fas fa-chart-line text-white text-lg"></i>
+          </div>
           <div>
-            <h1 className="text-xl font-bold text-white bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
+            <h1 className="text-xl font-semibold text-white">
               {whiteLabel.companyName}
             </h1>
-            <p className="text-xs text-slate-400 font-medium">
+            <p className="text-xs text-slate-400">
               {whiteLabel.tagline}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center space-x-1">
-          {/* Current Symbol Display */}
-          <div className="flex items-center space-x-2 px-4 py-2 bg-slate-700/50 rounded-lg border border-slate-600/50">
-            <Activity className="h-4 w-4 text-blue-400" />
-            <span className="text-sm font-mono text-white">{config.symbol}</span>
-            <span className="text-xs text-slate-400">{selectedSymbol?.price || '175.43'}</span>
-          </div>
-
-          <div className="w-px h-6 bg-slate-600 mx-2" />
-
+        <div className="flex items-center space-x-4">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setSettingsOpen(true)}
-            className="button-premium h-10 w-10 rounded-xl"
-            title="Theme Settings"
+            className="text-slate-400 hover:text-white hover:bg-slate-700"
           >
-            <Palette className="h-5 w-5" />
+            <Palette className="h-4 w-4" />
           </Button>
           
           <Button
             variant="ghost"
             size="icon"
             onClick={handleFullscreen}
-            className="button-premium h-10 w-10 rounded-xl"
-            title="Fullscreen"
+            className="text-slate-400 hover:text-white hover:bg-slate-700"
           >
-            <Expand className="h-5 w-5" />
+            <Expand className="h-4 w-4" />
           </Button>
           
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setSettingsOpen(true)}
-            className="button-premium h-10 w-10 rounded-xl"
-            title="Settings"
+            className="text-slate-400 hover:text-white hover:bg-slate-700"
           >
-            <Settings className="h-5 w-5" />
+            <Settings className="h-4 w-4" />
           </Button>
         </div>
       </div>

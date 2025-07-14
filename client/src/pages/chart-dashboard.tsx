@@ -50,28 +50,6 @@ export default function ChartDashboard() {
         <main className="flex-1 flex flex-col">
           <ChartToolbar />
           
-          {/* Connection Status Bar */}
-          <div className="flex items-center justify-between bg-slate-800/50 border-b border-slate-700/50 px-4 py-2">
-            <div className="flex items-center space-x-4">
-              <div className={`status-indicator ${isConnected ? '' : 'disconnected'}`}>
-                <span className="text-sm font-medium">
-                  {isConnected ? 'Connected' : 'Disconnected'}
-                </span>
-              </div>
-              <div className="text-xs text-slate-400">
-                {config.dataSource === 'realtime' ? 'Real-time Data' : 'Dummy Data'}
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-3 text-xs text-slate-400">
-              <span>Symbol: {config.symbol}</span>
-              <span>•</span>
-              <span>{config.timeframe}</span>
-              <span>•</span>
-              <span className="capitalize">{config.chartType}</span>
-            </div>
-          </div>
-          
           <div className="flex-1 bg-slate-900 relative">
             <ChartContainer />
           </div>
