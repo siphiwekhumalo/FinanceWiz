@@ -152,16 +152,19 @@ export class DummyDataService {
   }
 
   private getAdjustedCount(timeframe: string, baseCount: number): number {
+    // Ensure we always have enough data points for scrolling (at least 200)
+    const minCount = Math.max(200, baseCount);
+    
     switch (timeframe) {
-      case '1m': return Math.min(baseCount, 500);
-      case '5m': return Math.min(baseCount, 400);
-      case '15m': return Math.min(baseCount, 300);
-      case '1h': return Math.min(baseCount, 200);
-      case '4h': return Math.min(baseCount, 150);
-      case '1d': return Math.min(baseCount, 100);
-      case '1w': return Math.min(baseCount, 80);
-      case '1y': return Math.min(baseCount, 50);
-      default: return baseCount;
+      case '1m': return Math.max(minCount, 500);
+      case '5m': return Math.max(minCount, 400);
+      case '15m': return Math.max(minCount, 300);
+      case '1h': return Math.max(minCount, 250);
+      case '4h': return Math.max(minCount, 200);
+      case '1d': return Math.max(minCount, 200);
+      case '1w': return Math.max(minCount, 200);
+      case '1y': return Math.max(minCount, 200);
+      default: return minCount;
     }
   }
 

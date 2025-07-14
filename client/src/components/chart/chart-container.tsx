@@ -109,11 +109,14 @@ export function ChartContainer() {
     }
 
     // Calculate visible data range with scroll offset and zoom
-    const baseVisibleCount = Math.floor(chartWidth / 8);
-    const zoomedVisibleCount = Math.max(10, Math.floor(baseVisibleCount / zoomLevelRef.current));
+    const baseVisibleCount = Math.max(20, Math.floor(chartWidth / 8));
+    const zoomedVisibleCount = Math.max(15, Math.floor(baseVisibleCount / zoomLevelRef.current));
     const visibleDataCount = Math.min(data.length, zoomedVisibleCount);
     const maxScrollOffset = Math.max(0, data.length - visibleDataCount);
-    const currentScrollOffset = Math.min(scrollOffsetRef.current, maxScrollOffset);
+    
+    // Ensure scroll offset stays within bounds
+    scrollOffsetRef.current = Math.max(0, Math.min(scrollOffsetRef.current, maxScrollOffset));
+    const currentScrollOffset = scrollOffsetRef.current;
     const visibleData = data.slice(currentScrollOffset, currentScrollOffset + visibleDataCount);
 
     // Draw chart based on type
@@ -289,11 +292,11 @@ export function ChartContainer() {
         zoomLevelRef.current = Math.max(0.1, Math.min(5, zoomLevelRef.current * zoomFactor));
       } else {
         // Handle horizontal scrolling
-        const baseVisibleCount = Math.floor((container.offsetWidth - 120) / 8);
-        const visibleDataCount = Math.max(10, Math.floor(baseVisibleCount / zoomLevelRef.current));
+        const baseVisibleCount = Math.max(20, Math.floor((container.offsetWidth - 120) / 8));
+        const visibleDataCount = Math.max(15, Math.floor(baseVisibleCount / zoomLevelRef.current));
         const maxScrollOffset = Math.max(0, data.length - visibleDataCount);
         
-        const scrollSpeed = Math.max(1, Math.floor(visibleDataCount * 0.1));
+        const scrollSpeed = Math.max(2, Math.floor(visibleDataCount * 0.1));
         const deltaX = e.deltaX || e.deltaY;
         scrollOffsetRef.current = Math.max(0, Math.min(maxScrollOffset, scrollOffsetRef.current + (deltaX > 0 ? scrollSpeed : -scrollSpeed)));
       }
@@ -314,8 +317,8 @@ export function ChartContainer() {
         if (!isDraggingRef.current) return;
         
         const data = chartDataRef.current;
-        const baseVisibleCount = Math.floor((container.offsetWidth - 120) / 8);
-        const visibleDataCount = Math.max(10, Math.floor(baseVisibleCount / zoomLevelRef.current));
+        const baseVisibleCount = Math.max(20, Math.floor((container.offsetWidth - 120) / 8));
+        const visibleDataCount = Math.max(15, Math.floor(baseVisibleCount / zoomLevelRef.current));
         const maxScrollOffset = Math.max(0, data.length - visibleDataCount);
         
         const deltaX = e.clientX - startX;
@@ -337,8 +340,8 @@ export function ChartContainer() {
         const applyMomentum = () => {
           if (Math.abs(velocityRef.current.x) > 0.1) {
             const data = chartDataRef.current;
-            const baseVisibleCount = Math.floor((container.offsetWidth - 120) / 8);
-            const visibleDataCount = Math.max(10, Math.floor(baseVisibleCount / zoomLevelRef.current));
+            const baseVisibleCount = Math.max(20, Math.floor((container.offsetWidth - 120) / 8));
+            const visibleDataCount = Math.max(15, Math.floor(baseVisibleCount / zoomLevelRef.current));
             const maxScrollOffset = Math.max(0, data.length - visibleDataCount);
             
             scrollOffsetRef.current = Math.max(0, Math.min(maxScrollOffset, scrollOffsetRef.current - velocityRef.current.x));
@@ -366,8 +369,8 @@ export function ChartContainer() {
       const data = chartDataRef.current;
       if (data.length === 0) return;
       
-      const baseVisibleCount = Math.floor((container.offsetWidth - 120) / 8);
-      const visibleDataCount = Math.max(10, Math.floor(baseVisibleCount / zoomLevelRef.current));
+      const baseVisibleCount = Math.max(20, Math.floor((container.offsetWidth - 120) / 8));
+      const visibleDataCount = Math.max(15, Math.floor(baseVisibleCount / zoomLevelRef.current));
       const maxScrollOffset = Math.max(0, data.length - visibleDataCount);
       
       switch (e.key) {
