@@ -3,19 +3,37 @@ import { Button } from '@/components/ui/button';
 import { useChartStore } from '@/store/chart-store';
 import { ChartTypeDropdown } from './chart-type-dropdown';
 import { TimeframeDropdown } from './timeframe-dropdown';
+import { IndicatorsDropdown } from './indicators-dropdown';
+import { DrawingToolsDropdown } from './drawing-tools-dropdown';
+import { SymbolDropdown } from './symbol-dropdown';
+import { DataSourceToggle } from './data-source-toggle';
 
 export function ChartToolbar() {
   const { toggleVolume, toggleCrosshair, resetZoom, config } = useChartStore();
 
   return (
     <div className="flex items-center justify-between bg-slate-800 border-b border-slate-700 p-2">
-      {/* Left side - Chart type and timeframe selector */}
+      {/* Left side - Symbol, chart type, timeframe, indicators and drawing tools */}
       <div className="flex items-center space-x-3">
+        <SymbolDropdown />
+        
+        <div className="w-px h-4 bg-slate-600" />
+        
         <ChartTypeDropdown />
         
         <div className="w-px h-4 bg-slate-600" />
         
         <TimeframeDropdown />
+        
+        <div className="w-px h-4 bg-slate-600" />
+        
+        <IndicatorsDropdown />
+        
+        <DrawingToolsDropdown />
+        
+        <div className="w-px h-4 bg-slate-600" />
+        
+        <DataSourceToggle />
       </div>
 
       {/* Right side - Chart controls */}
