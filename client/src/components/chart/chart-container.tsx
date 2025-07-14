@@ -666,8 +666,8 @@ export function ChartContainer() {
           }
         });
       } else {
-        // Absolute mode: normalize comparison symbols to percentage changes
-        // This creates the professional overlay effect shown in ChartIQ
+        // Absolute mode: ChartIQ-style normalized percentage comparison
+        // Both symbols start from 0% baseline and show relative movement
         const baselinePrice = alignedVisibleData[0]?.close || 0;
         const mainBaselinePrice = visibleData[0]?.close || 0;
         
@@ -676,17 +676,18 @@ export function ChartContainer() {
         alignedVisibleData.forEach((point, index) => {
           const x = padding + (index * chartWidth) / Math.max(1, visibleData.length - 1);
           
-          // Calculate percentage changes from baseline for both symbols
-          const compPercentageChange = ((point.close - baselinePrice) / baselinePrice);
-          const mainPercentageChange = ((visibleData[index]?.close || mainBaselinePrice) - mainBaselinePrice) / mainBaselinePrice;
+          // Calculate percentage changes from baseline (ChartIQ method)
+          const compPercentageChange = ((point.close - baselinePrice) / baselinePrice) * 100;
+          const mainPercentageChange = ((visibleData[index]?.close || mainBaselinePrice) - mainBaselinePrice) / mainBaselinePrice * 100;
           
-          // Position comparison symbol relative to main symbol's percentage change
-          // This creates the overlay effect where both symbols move together
-          const relativeChange = compPercentageChange - mainPercentageChange;
+          // Map main symbol's percentage change to chart coordinates
+          const percentageRange = 10; // ±10% display range
+          const mainNormalizedY = Math.max(0, Math.min(1, (mainPercentageChange + percentageRange) / (2 * percentageRange)));
+          const mainY = padding + ((1 - mainNormalizedY) * chartHeight);
           
-          // Map to chart coordinates with main symbol as reference
-          const mainY = padding + ((maxPrice - (visibleData[index]?.close || mainBaselinePrice)) / priceRange) * chartHeight;
-          const y = mainY + (relativeChange * chartHeight * 0.3); // Scale the relative difference
+          // Map comparison symbol's percentage change to chart coordinates
+          const compNormalizedY = Math.max(0, Math.min(1, (compPercentageChange + percentageRange) / (2 * percentageRange)));
+          const y = padding + ((1 - compNormalizedY) * chartHeight);
           
           if (index === 0) {
             ctx.moveTo(x, y);
@@ -724,19 +725,16 @@ export function ChartContainer() {
             x = padding + (index * chartWidth) / Math.max(1, visibleData.length - 1);
             y = padding + chartHeight - (normalizedY * chartHeight);
           } else {
-            // Absolute mode: use percentage-based positioning relative to main symbol
+            // Absolute mode: ChartIQ-style normalized percentage positioning
             const basePrice = alignedVisibleData[0]?.close || 0;
-            const mainBasePrice = visibleData[0]?.close || 0;
+            if (basePrice === 0) return;
             
-            if (basePrice === 0 || mainBasePrice === 0) return;
-            
-            const compPercentageChange = ((point.close - basePrice) / basePrice);
-            const mainPercentageChange = ((visibleData[index]?.close || mainBasePrice) - mainBasePrice) / mainBasePrice;
-            const relativeChange = compPercentageChange - mainPercentageChange;
+            const compPercentageChange = ((point.close - basePrice) / basePrice) * 100;
+            const percentageRange = 10; // ±10% display range
+            const compNormalizedY = Math.max(0, Math.min(1, (compPercentageChange + percentageRange) / (2 * percentageRange)));
             
             x = padding + (index * chartWidth) / Math.max(1, visibleData.length - 1);
-            const mainY = padding + ((maxPrice - (visibleData[index]?.close || mainBasePrice)) / priceRange) * chartHeight;
-            y = mainY + (relativeChange * chartHeight * 0.3);
+            y = padding + ((1 - compNormalizedY) * chartHeight);
           }
           
           if (index === 0) {
@@ -924,27 +922,41 @@ export function ChartContainer() {
       ctx.stroke();
     }
 
-    // Draw price axis labels (Y-axis) with better formatting for large datasets
+    // Draw price axis labels (Y-axis) - show percentage when comparison symbols are active
     ctx.fillStyle = '#F1F5F9';
     ctx.font = '11px monospace';
     ctx.textAlign = 'right';
+    
+    // Check if comparison symbols are active to determine axis format
+    const hasActiveComparisons = config.comparisonSymbols.some(symbol => symbol.enabled);
+    
     for (let i = 0; i <= 5; i++) {
-      const price = maxPrice - (i * priceRange) / 5;
       const y = padding + (i * chartHeight) / 5;
       
-      // Format price based on value for better readability
-      let formattedPrice = '';
-      if (price >= 1000000) {
-        formattedPrice = `$${(price / 1000000).toFixed(1)}M`;
-      } else if (price >= 1000) {
-        formattedPrice = `$${(price / 1000).toFixed(1)}K`;
-      } else if (price >= 1) {
-        formattedPrice = `$${price.toFixed(2)}`;
+      if (hasActiveComparisons) {
+        // ChartIQ-style: Show percentage values when comparison symbols are active
+        const percentageRange = 10; // ±10% display range
+        const percentage = percentageRange - (i * (2 * percentageRange)) / 5;
+        const formattedValue = `${percentage >= 0 ? '+' : ''}${percentage.toFixed(1)}%`;
+        ctx.fillText(formattedValue, width - padding + 5, y + 4);
       } else {
-        formattedPrice = `$${price.toFixed(4)}`;
+        // Normal mode: Show price values
+        const price = maxPrice - (i * priceRange) / 5;
+        
+        // Format price based on value for better readability
+        let formattedPrice = '';
+        if (price >= 1000000) {
+          formattedPrice = `$${(price / 1000000).toFixed(1)}M`;
+        } else if (price >= 1000) {
+          formattedPrice = `$${(price / 1000).toFixed(1)}K`;
+        } else if (price >= 1) {
+          formattedPrice = `$${price.toFixed(2)}`;
+        } else {
+          formattedPrice = `$${price.toFixed(4)}`;
+        }
+        
+        ctx.fillText(formattedPrice, width - padding + 5, y + 4);
       }
-      
-      ctx.fillText(formattedPrice, width - padding + 5, y + 4);
     }
     const visibleData = data.slice(currentScrollOffset, currentScrollOffset + visibleDataCount);
 

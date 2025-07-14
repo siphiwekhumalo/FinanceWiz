@@ -1,0 +1,101 @@
+ Problem: Why your “Compare” overlay doesn’t look like ChartIQ's?
+✅ Your chart (Image 1):
+GOOGL line is plotted with jagged drops.
+
+Doesn’t align visually or logically with AAPL candles.
+
+Seems scaled to absolute price (GOOGL price = ~$120s, while AAPL = $170s).
+
+No baseline or relative zero anchor shown.
+
+✅ ChartIQ chart (Image 2):
+Overlay (BH) starts from the same visual baseline as the base symbol (AAPL).
+
+It shows relative movement, not absolute prices.
+
+Vertical axis shows percentage change (+3.5%, -5%, etc.)
+
+Y-axis adjusts to fit both plots comparatively — even if underlying values differ.
+
+🧠 What ChartIQ is doing (and you’re not — yet):
+1. ✅ Compare mode is “Normalized to % Change”
+They show “How did BH move relative to AAPL”, not raw prices.
+
+2. ✅ Both symbols start from 0% on the y-axis
+The Y-axis becomes % movement from the starting candle.
+
+3. ✅ Chart overlays use relative scaling
+The comparison line is visually aligned to the base, regardless of actual value.
+
+🔧 How You Can Match ChartIQ’s Compare Feature
+Here’s exactly how to fix this.
+
+✅ 1. Normalize Compare Series to % Change
+For every compare symbol:
+
+ts
+Copy
+Edit
+const baseValue = compareData[0].value;
+const normalized = compareData.map(d => ({
+  time: d.time,
+  value: ((d.value - baseValue) / baseValue) * 100  // percentage
+}));
+This makes the compare series start from 0% and move up/down in percent — just like ChartIQ.
+
+✅ 2. Change the Compare Y-Axis to % Format
+If you're using LightweightCharts, do:
+
+ts
+Copy
+Edit
+chart.addLineSeries({
+  priceScaleId: 'overlay',  // separate scale
+  priceFormat: {
+    type: 'percent',
+    precision: 2,
+    minMove: 0.01
+  },
+});
+This will:
+
+Show Y-axis as %
+
+Visually align the base and compare from same anchor
+
+💡 You can even merge scales if desired, but it's better to use a separate scale for clarity.
+
+✅ 3. Sync Start Times and Timestamps
+Make sure:
+
+Base and compare series start from the same time
+
+All timestamps are aligned per timeframe
+
+If compare data starts late or has missing intervals, you’ll get visual offsets.
+
+✅ 4. Style the Compare Line
+Make it visually different (line or area chart), e.g.:
+
+ts
+Copy
+Edit
+chart.addLineSeries({
+  color: '#4caf50',
+  lineWidth: 2,
+  priceScaleId: 'overlay'
+});
+🧪 Optional Enhancements
+Feature	Description
+🔁 Toggle between “% Compare” and “Absolute Overlay”	Give users both views
+📈 Indicator-style overlay	Plot relative line in separate pane
+🧩 Dual y-axis	Left for base, right for compare (if not normalized)
+🔐 Tooltip sync	Show % change in tooltip (even if price hidden)
+
+✅ Summary
+Feature	Yours	ChartIQ
+Compare series format	Absolute prices	% normalized to base
+Alignment baseline	Different starting points	Same baseline (0%)
+Y-axis	Raw values	Percentage axis
+Overlay logic	Over raw candles	Over shared % movement
+
