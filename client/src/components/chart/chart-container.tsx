@@ -871,60 +871,86 @@ export function ChartContainer() {
     const maxTime = Math.max(...times);
     const timeRange = maxTime - minTime;
 
-    // Draw grid (almost invisible) with pixel-perfect lines
-    ctx.strokeStyle = '#1e293b';
+    // Draw professional grid lines like ChartIQ
+    ctx.strokeStyle = 'rgba(71, 85, 105, 0.3)';
     ctx.lineWidth = 1;
     
-    // Horizontal grid lines with pixel offset for crisp rendering
-    for (let i = 0; i <= 5; i++) {
-      const y = Math.floor(topPadding + (i * chartHeight) / 5) + pixelOffset;
+    // Horizontal grid lines - aligned with price labels
+    for (let i = 0; i <= 6; i++) {
+      const y = Math.floor(topPadding + (i * chartHeight) / 6) + pixelOffset;
       ctx.beginPath();
       ctx.moveTo(leftPadding, y);
       ctx.lineTo(width - rightPadding, y);
       ctx.stroke();
     }
 
-    // Vertical grid lines with pixel offset
-    for (let i = 0; i <= 8; i++) {
-      const x = Math.floor(leftPadding + (i * chartWidth) / 8) + pixelOffset;
+    // Vertical grid lines - more subtle and spaced nicely
+    const verticalLines = Math.min(8, Math.floor(chartWidth / 120));
+    for (let i = 0; i <= verticalLines; i++) {
+      const x = Math.floor(leftPadding + (i * chartWidth) / verticalLines) + pixelOffset;
       ctx.beginPath();
       ctx.moveTo(x, topPadding);
       ctx.lineTo(x, height - bottomPadding);
       ctx.stroke();
     }
 
-    // Draw price axis labels (Y-axis) - always show main symbol's price values
-    ctx.fillStyle = '#F1F5F9';
-    ctx.font = '11px monospace';
-    ctx.textAlign = 'right';
+    // Draw price axis labels (Y-axis) - professional styling like ChartIQ
+    ctx.fillStyle = '#94A3B8';
+    ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.textAlign = 'left';
     
-    for (let i = 0; i <= 5; i++) {
-      const y = topPadding + (i * chartHeight) / 5;
-      const price = maxPrice - (i * priceRange) / 5;
+    // Draw price labels on the right edge with background
+    for (let i = 0; i <= 6; i++) {
+      const y = topPadding + (i * chartHeight) / 6;
+      const price = maxPrice - (i * priceRange) / 6;
       
-      // Format price based on value for better readability
+      // Format price for better readability
       let formattedPrice = '';
       if (price >= 1000000) {
-        formattedPrice = `$${(price / 1000000).toFixed(1)}M`;
+        formattedPrice = `${(price / 1000000).toFixed(1)}M`;
       } else if (price >= 1000) {
-        formattedPrice = `$${(price / 1000).toFixed(1)}K`;
+        formattedPrice = `${(price / 1000).toFixed(1)}K`;
       } else if (price >= 1) {
-        formattedPrice = `$${price.toFixed(2)}`;
+        formattedPrice = `${price.toFixed(2)}`;
       } else {
-        formattedPrice = `$${price.toFixed(4)}`;
+        formattedPrice = `${price.toFixed(4)}`;
       }
       
-      ctx.fillText(formattedPrice, width - rightPadding + 5, y + 4);
+      // Draw subtle background for price labels
+      const labelWidth = ctx.measureText(formattedPrice).width + 8;
+      ctx.fillStyle = 'rgba(30, 41, 59, 0.8)';
+      ctx.fillRect(width - rightPadding + 2, y - 8, labelWidth, 16);
+      
+      // Draw price text
+      ctx.fillStyle = '#E2E8F0';
+      ctx.fillText(formattedPrice, width - rightPadding + 6, y + 4);
     }
+    
+    // Draw axis border lines
+    ctx.strokeStyle = 'rgba(71, 85, 105, 0.6)';
+    ctx.lineWidth = 1;
+    
+    // Right border for price axis
+    ctx.beginPath();
+    ctx.moveTo(width - rightPadding, topPadding);
+    ctx.lineTo(width - rightPadding, height - bottomPadding);
+    ctx.stroke();
+    
+    // Bottom border for time axis
+    ctx.beginPath();
+    ctx.moveTo(leftPadding, height - bottomPadding);
+    ctx.lineTo(width - rightPadding, height - bottomPadding);
+    ctx.stroke();
     const visibleData = data.slice(currentScrollOffset, currentScrollOffset + visibleDataCount);
 
-    // Draw time axis labels (X-axis) with proper date formatting for large datasets
+    // Draw time axis labels (X-axis) - professional styling like ChartIQ
     ctx.textAlign = 'center';
-    ctx.font = '10px monospace';
+    ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillStyle = '#94A3B8';
     const visibleDataForLabels = visibleData.length > 0 ? visibleData : data;
     
     // Determine number of labels based on chart width to avoid overlap
-    const maxLabels = Math.min(8, Math.floor(chartWidth / 80));
+    const maxLabels = Math.min(6, Math.floor(chartWidth / 100));
     
     for (let i = 0; i <= maxLabels; i++) {
       const x = leftPadding + (i * chartWidth) / maxLabels;
@@ -934,7 +960,7 @@ export function ChartContainer() {
         const time = new Date(visibleDataForLabels[dataIndex].time * 1000);
         let timeStr = '';
         
-        // Format based on timeframe for optimal readability
+        // Format based on timeframe for professional look
         switch (config.timeframe) {
           case '1m':
           case '5m':
@@ -949,8 +975,7 @@ export function ChartContainer() {
           case '4h':
             timeStr = time.toLocaleDateString([], { 
               month: 'short', 
-              day: 'numeric',
-              hour: 'numeric'
+              day: 'numeric'
             });
             break;
           case '1d':
@@ -962,13 +987,11 @@ export function ChartContainer() {
           case '1w':
             timeStr = time.toLocaleDateString([], { 
               month: 'short', 
-              day: 'numeric',
-              year: '2-digit'
+              day: 'numeric'
             });
             break;
           case '1y':
             timeStr = time.toLocaleDateString([], { 
-              month: 'short', 
               year: 'numeric'
             });
             break;
@@ -979,7 +1002,7 @@ export function ChartContainer() {
             });
         }
         
-        ctx.fillText(timeStr, x, height - bottomPadding + 15);
+        ctx.fillText(timeStr, x, height - bottomPadding + 18);
       }
     }
 
