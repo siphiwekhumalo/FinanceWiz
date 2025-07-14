@@ -592,7 +592,7 @@ export function ChartContainer() {
     ctx.restore();
   }, [config.showCrosshair, chartToCanvasCoords]);
 
-  // Draw comparison symbols
+  // Draw comparison symbols with stable positioning
   const drawComparisonSymbols = useCallback((ctx: CanvasRenderingContext2D, data: ChartDataPoint[], minPrice: number, maxPrice: number, priceRange: number, visibleData: ChartDataPoint[]) => {
     if (!config.comparisonSymbols.length) return;
 
@@ -602,14 +602,7 @@ export function ChartContainer() {
     const chartWidth = width - padding * 2;
     const chartHeight = height - padding * 2;
 
-    // Use the same visible data calculation as the main chart
-    const baseVisibleCount = Math.max(20, Math.floor(chartWidth / 8));
-    const zoomedVisibleCount = Math.max(15, Math.floor(baseVisibleCount / zoomLevelRef.current));
-    const visibleDataCount = Math.min(data.length, zoomedVisibleCount);
-    const maxScrollOffset = Math.max(0, data.length - visibleDataCount);
-    
-    const currentScrollOffset = Math.max(0, Math.min(scrollOffsetRef.current, maxScrollOffset));
-    
+    // Ensure we have valid visible data
     if (visibleData.length === 0) return;
     if (priceRange === 0) return;
 
@@ -621,23 +614,29 @@ export function ChartContainer() {
       ctx.lineWidth = 2;
       ctx.setLineDash([]);
 
-      // Always regenerate comparison data aligned with main chart timestamps
-      // This ensures proper time alignment regardless of chart changes
-      const mainTimestamps = visibleData.map(point => point.time);
-      const chartService = ChartService.getInstance();
-      const alignedCompData = chartService.dummyService.generateChartData(
-        compSymbol.symbol,
-        config.timeframe,
-        100,
-        mainTimestamps
-      );
+      // Use stored comparison data if available, otherwise generate aligned data
+      let alignedVisibleData;
+      if (compSymbol.data && compSymbol.data.length > 0) {
+        // Use the same slice logic as the main chart
+        const currentScrollOffset = Math.max(0, Math.min(scrollOffsetRef.current, Math.max(0, compSymbol.data.length - visibleData.length)));
+        alignedVisibleData = compSymbol.data.slice(currentScrollOffset, currentScrollOffset + visibleData.length);
+      } else {
+        // Generate aligned data as fallback
+        const mainTimestamps = visibleData.map(point => point.time);
+        const chartService = ChartService.getInstance();
+        const alignedCompData = chartService.dummyService.generateChartData(
+          compSymbol.symbol,
+          config.timeframe,
+          100,
+          mainTimestamps
+        );
+        alignedVisibleData = alignedCompData.slice(0, visibleData.length);
+      }
       
-      if (alignedCompData.length === 0) {
+      if (alignedVisibleData.length === 0) {
         ctx.restore();
         return;
       }
-      
-      const alignedVisibleData = alignedCompData.slice(0, visibleData.length);
 
       ctx.beginPath();
       
@@ -1143,7 +1142,7 @@ export function ChartContainer() {
     // Draw drawing objects
     drawDrawingObjects(ctx, data);
 
-    // Draw comparison symbols
+    // Draw comparison symbols (before crosshair to avoid interference)
     drawComparisonSymbols(ctx, data, minPrice, maxPrice, priceRange, visibleData);
 
     // Draw crosshair
