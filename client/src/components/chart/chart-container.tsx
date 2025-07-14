@@ -1325,7 +1325,7 @@ export function ChartContainer() {
     <div className="w-full h-full relative">
       {/* Draggable OHLC Display with Framer Motion */}
       <motion.div 
-        className="absolute bg-slate-800/95 backdrop-blur-sm rounded-lg p-3 border border-slate-700/50 cursor-move select-none z-20 draggable-element"
+        className="card-premium absolute bg-slate-800/95 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50 cursor-move select-none z-20 draggable-element"
         style={{ 
           left: `${ohlcPosition.x}px`, 
           top: `${ohlcPosition.y}px`
@@ -1334,7 +1334,7 @@ export function ChartContainer() {
         animate={{ opacity: 1, y: 0 }}
         whileHover={{ 
           scale: 1.02, 
-          boxShadow: '0 8px 25px rgba(0, 0, 0, 0.3)',
+          boxShadow: '0 12px 35px rgba(0, 0, 0, 0.4)',
           borderColor: 'rgba(59, 130, 246, 0.5)'
         }}
         whileTap={{ scale: 0.98 }}
@@ -1395,10 +1395,10 @@ export function ChartContainer() {
       </motion.div>
 
       {/* Chart Canvas - Always Display */}
-      <div ref={containerRef} id="chart-container" className="w-full h-full bg-slate-900 relative overflow-hidden">
+      <div ref={containerRef} id="chart-container" className="chart-container w-full h-full relative overflow-hidden shadow-inner">
         <canvas
           ref={canvasRef}
-          className={`w-full h-full focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded-sm ${
+          className={`w-full h-full focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded-lg transition-all duration-200 ${
             config.selectedTool === 'cursor' ? 'cursor-grab active:cursor-grabbing' : 'cursor-crosshair'
           }`}
           style={{ display: 'block' }}
