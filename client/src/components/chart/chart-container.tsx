@@ -85,9 +85,12 @@ export function ChartContainer() {
 
     const rect = canvas.getBoundingClientRect();
     const { width, height } = canvas;
-    const padding = 40;
-    const chartWidth = width - padding * 2;
-    const chartHeight = height - padding * 2;
+    const leftPadding = 0;
+    const rightPadding = 60;
+    const topPadding = 40;
+    const bottomPadding = 40;
+    const chartWidth = width - leftPadding - rightPadding;
+    const chartHeight = height - topPadding - bottomPadding;
 
     // Calculate price range
     const prices = data.flatMap(d => [d.open, d.high, d.low, d.close]);
@@ -96,8 +99,8 @@ export function ChartContainer() {
     const priceRange = maxPrice - minPrice;
 
     // Calculate time and price from canvas coordinates
-    const normalizedX = (canvasX - padding) / chartWidth;
-    const normalizedY = (canvasY - padding) / chartHeight;
+    const normalizedX = (canvasX - leftPadding) / chartWidth;
+    const normalizedY = (canvasY - topPadding) / chartHeight;
     
     const price = maxPrice - (normalizedY * priceRange);
     const timeIndex = Math.floor(normalizedX * (data.length - 1));
@@ -112,9 +115,12 @@ export function ChartContainer() {
     if (!canvas || !data.length) return null;
 
     const { width, height } = canvas;
-    const padding = 40;
-    const chartWidth = width - padding * 2;
-    const chartHeight = height - padding * 2;
+    const leftPadding = 0;
+    const rightPadding = 60;
+    const topPadding = 40;
+    const bottomPadding = 40;
+    const chartWidth = width - leftPadding - rightPadding;
+    const chartHeight = height - topPadding - bottomPadding;
 
     // Calculate price range
     const prices = data.flatMap(d => [d.open, d.high, d.low, d.close]);
@@ -128,8 +134,8 @@ export function ChartContainer() {
     const normalizedY = (maxPrice - price) / priceRange;
 
     return {
-      x: padding + (normalizedX * chartWidth),
-      y: padding + (normalizedY * chartHeight)
+      x: leftPadding + (normalizedX * chartWidth),
+      y: topPadding + (normalizedY * chartHeight)
     };
   }, []);
 
@@ -790,9 +796,12 @@ export function ChartContainer() {
     const pixelRatio = window.devicePixelRatio || 1;
     const width = rect.width;
     const height = rect.height;
-    const padding = 40; // Reduced padding for more chart space
-    const chartWidth = width - 2 * padding;
-    const chartHeight = height - 2 * padding;
+    const leftPadding = 0; // Start from left edge
+    const rightPadding = 60; // Space for price labels
+    const topPadding = 40;
+    const bottomPadding = 40;
+    const chartWidth = width - leftPadding - rightPadding;
+    const chartHeight = height - topPadding - bottomPadding;
     
     // Enable HD rendering with enhanced anti-aliasing
     ctx.imageSmoothingEnabled = true;
@@ -868,19 +877,19 @@ export function ChartContainer() {
     
     // Horizontal grid lines with pixel offset for crisp rendering
     for (let i = 0; i <= 5; i++) {
-      const y = Math.floor(padding + (i * chartHeight) / 5) + pixelOffset;
+      const y = Math.floor(topPadding + (i * chartHeight) / 5) + pixelOffset;
       ctx.beginPath();
-      ctx.moveTo(padding, y);
-      ctx.lineTo(width - padding, y);
+      ctx.moveTo(leftPadding, y);
+      ctx.lineTo(width - rightPadding, y);
       ctx.stroke();
     }
 
     // Vertical grid lines with pixel offset
     for (let i = 0; i <= 8; i++) {
-      const x = Math.floor(padding + (i * chartWidth) / 8) + pixelOffset;
+      const x = Math.floor(leftPadding + (i * chartWidth) / 8) + pixelOffset;
       ctx.beginPath();
-      ctx.moveTo(x, padding);
-      ctx.lineTo(x, height - padding);
+      ctx.moveTo(x, topPadding);
+      ctx.lineTo(x, height - bottomPadding);
       ctx.stroke();
     }
 
@@ -890,7 +899,7 @@ export function ChartContainer() {
     ctx.textAlign = 'right';
     
     for (let i = 0; i <= 5; i++) {
-      const y = padding + (i * chartHeight) / 5;
+      const y = topPadding + (i * chartHeight) / 5;
       const price = maxPrice - (i * priceRange) / 5;
       
       // Format price based on value for better readability
@@ -905,7 +914,7 @@ export function ChartContainer() {
         formattedPrice = `$${price.toFixed(4)}`;
       }
       
-      ctx.fillText(formattedPrice, width - padding + 5, y + 4);
+      ctx.fillText(formattedPrice, width - rightPadding + 5, y + 4);
     }
     const visibleData = data.slice(currentScrollOffset, currentScrollOffset + visibleDataCount);
 
@@ -918,7 +927,7 @@ export function ChartContainer() {
     const maxLabels = Math.min(8, Math.floor(chartWidth / 80));
     
     for (let i = 0; i <= maxLabels; i++) {
-      const x = padding + (i * chartWidth) / maxLabels;
+      const x = leftPadding + (i * chartWidth) / maxLabels;
       const dataIndex = Math.floor((i / maxLabels) * (visibleDataForLabels.length - 1));
       
       if (dataIndex < visibleDataForLabels.length) {
@@ -970,7 +979,7 @@ export function ChartContainer() {
             });
         }
         
-        ctx.fillText(timeStr, x, height - padding + 20);
+        ctx.fillText(timeStr, x, height - bottomPadding + 20);
       }
     }
 
@@ -978,11 +987,11 @@ export function ChartContainer() {
     if (config.chartType === 'candlestick') {
       // Draw candlesticks with enhanced HD rendering
       visibleData.forEach((point, index) => {
-        const x = Math.floor(padding + (index * chartWidth) / (visibleData.length - 1));
-        const openY = Math.floor(padding + ((maxPrice - point.open) * chartHeight) / priceRange);
-        const highY = Math.floor(padding + ((maxPrice - point.high) * chartHeight) / priceRange);
-        const lowY = Math.floor(padding + ((maxPrice - point.low) * chartHeight) / priceRange);
-        const closeY = Math.floor(padding + ((maxPrice - point.close) * chartHeight) / priceRange);
+        const x = Math.floor(leftPadding + (index * chartWidth) / (visibleData.length - 1));
+        const openY = Math.floor(topPadding + ((maxPrice - point.open) * chartHeight) / priceRange);
+        const highY = Math.floor(topPadding + ((maxPrice - point.high) * chartHeight) / priceRange);
+        const lowY = Math.floor(topPadding + ((maxPrice - point.low) * chartHeight) / priceRange);
+        const closeY = Math.floor(topPadding + ((maxPrice - point.close) * chartHeight) / priceRange);
 
         const isUp = point.close > point.open;
         const candleWidth = Math.max(4, Math.floor(chartWidth / visibleData.length * 0.8));
@@ -1030,8 +1039,8 @@ export function ChartContainer() {
       ctx.beginPath();
       
       visibleData.forEach((point, index) => {
-        const x = padding + (index * chartWidth) / (visibleData.length - 1);
-        const y = padding + ((maxPrice - point.close) * chartHeight) / priceRange;
+        const x = leftPadding + (index * chartWidth) / (visibleData.length - 1);
+        const y = topPadding + ((maxPrice - point.close) * chartHeight) / priceRange;
         
         if (index === 0) {
           ctx.moveTo(x, y);
@@ -1050,8 +1059,8 @@ export function ChartContainer() {
       ctx.beginPath();
       
       visibleData.forEach((point, index) => {
-        const x = padding + (index * chartWidth) / (visibleData.length - 1);
-        const y = padding + ((maxPrice - point.close) * chartHeight) / priceRange;
+        const x = leftPadding + (index * chartWidth) / (visibleData.length - 1);
+        const y = topPadding + ((maxPrice - point.close) * chartHeight) / priceRange;
         
         if (index === 0) {
           ctx.moveTo(x, y);
@@ -1061,18 +1070,18 @@ export function ChartContainer() {
       });
       
       // Close the path to create area
-      const lastX = padding + chartWidth;
-      const bottomY = height - padding;
+      const lastX = leftPadding + chartWidth;
+      const bottomY = height - bottomPadding;
       ctx.lineTo(lastX, bottomY);
-      ctx.lineTo(padding, bottomY);
+      ctx.lineTo(leftPadding, bottomY);
       ctx.closePath();
       ctx.fill();
       
       // Draw the line on top
       ctx.beginPath();
       visibleData.forEach((point, index) => {
-        const x = padding + (index * chartWidth) / (visibleData.length - 1);
-        const y = padding + ((maxPrice - point.close) * chartHeight) / priceRange;
+        const x = leftPadding + (index * chartWidth) / (visibleData.length - 1);
+        const y = topPadding + ((maxPrice - point.close) * chartHeight) / priceRange;
         
         if (index === 0) {
           ctx.moveTo(x, y);
@@ -1086,11 +1095,11 @@ export function ChartContainer() {
     // Draw volume chart if enabled
     if (config.showVolume) {
       const volumeHeight = chartHeight * 0.2;
-      const volumeY = height - padding - volumeHeight;
+      const volumeY = height - bottomPadding - volumeHeight;
       const maxVolume = Math.max(...visibleData.map(d => d.volume));
       
       visibleData.forEach((point, index) => {
-        const x = padding + (index * chartWidth) / (visibleData.length - 1);
+        const x = leftPadding + (index * chartWidth) / (visibleData.length - 1);
         const barHeight = (point.volume / maxVolume) * volumeHeight;
         const barWidth = Math.max(2, chartWidth / visibleData.length * 0.8);
         
@@ -1111,17 +1120,17 @@ export function ChartContainer() {
     // Draw scroll indicator
     if (data.length > visibleDataCount) {
       const scrollbarHeight = 4;
-      const scrollbarY = height - padding + 40;
+      const scrollbarY = height - bottomPadding + 40;
       const scrollbarWidth = chartWidth;
       const scrollProgress = currentScrollOffset / maxScrollOffset;
       
       // Draw scrollbar track
       ctx.fillStyle = '#334155';
-      ctx.fillRect(padding, scrollbarY, scrollbarWidth, scrollbarHeight);
+      ctx.fillRect(leftPadding, scrollbarY, scrollbarWidth, scrollbarHeight);
       
       // Draw scrollbar thumb
       const thumbWidth = (visibleDataCount / data.length) * scrollbarWidth;
-      const thumbX = padding + (scrollProgress * (scrollbarWidth - thumbWidth));
+      const thumbX = leftPadding + (scrollProgress * (scrollbarWidth - thumbWidth));
       ctx.fillStyle = '#64748b';
       ctx.fillRect(thumbX, scrollbarY, thumbWidth, scrollbarHeight);
     }
