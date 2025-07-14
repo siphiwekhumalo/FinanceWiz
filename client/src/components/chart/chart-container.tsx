@@ -1436,7 +1436,7 @@ export function ChartContainer() {
       }
     };
 
-    // Add event listeners
+    // Add event listeners with proper focus handling
     canvas.addEventListener('wheel', handleWheel, { passive: false });
     canvas.addEventListener('mousedown', handleMouseDownNative);
     canvas.addEventListener('mousemove', handleMouseMoveNative);
@@ -1444,6 +1444,20 @@ export function ChartContainer() {
     canvas.addEventListener('keydown', handleKeyDown);
     canvas.addEventListener('mouseleave', handleMouseLeave);
     canvas.setAttribute('tabindex', '0'); // Make canvas focusable for keyboard events
+    
+    // Focus the canvas to ensure it can receive events
+    canvas.focus();
+    
+    // Add click listener to ensure canvas gets focus
+    canvas.addEventListener('click', () => {
+      canvas.focus();
+    });
+    
+    console.log('Canvas event listeners added:', {
+      wheel: !!handleWheel,
+      mousedown: !!handleMouseDownNative,
+      canvas: !!canvas
+    });
 
     // Load and draw chart data
     const loadData = async () => {
@@ -1599,6 +1613,14 @@ export function ChartContainer() {
           }`}
           style={{ display: 'block', pointerEvents: 'auto' }}
           onContextMenu={handleContextMenu}
+          onWheel={(e) => {
+            console.log('React wheel event detected:', e);
+            e.preventDefault();
+          }}
+          onClick={() => {
+            console.log('Canvas clicked - focusing');
+            if (canvasRef.current) canvasRef.current.focus();
+          }}
         />
         
         {/* Comparison Legend */}
