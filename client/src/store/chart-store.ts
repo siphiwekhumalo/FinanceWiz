@@ -31,6 +31,8 @@ interface ChartStore {
   toggleVolume: () => void;
   toggleCrosshair: () => void;
   resetZoom: () => void;
+  zoomIn: () => void;
+  zoomOut: () => void;
   
   // Chart instance management
   chartInstance: any;
@@ -149,6 +151,22 @@ export const useChartStore = create<ChartStore>((set, get) => ({
     const state = get();
     if (state.chartInstance && state.chartInstance.redraw) {
       state.chartInstance.redraw();
+    }
+  },
+  
+  zoomIn: () => {
+    // Zoom in by 1.2x
+    const state = get();
+    if (state.chartInstance && state.chartInstance.zoomIn) {
+      state.chartInstance.zoomIn();
+    }
+  },
+  
+  zoomOut: () => {
+    // Zoom out by 0.8x
+    const state = get();
+    if (state.chartInstance && state.chartInstance.zoomOut) {
+      state.chartInstance.zoomOut();
     }
   },
   

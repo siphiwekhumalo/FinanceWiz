@@ -593,7 +593,7 @@ export function ChartContainer() {
   }, [config.showCrosshair, chartToCanvasCoords]);
 
   // Draw comparison symbols
-  const drawComparisonSymbols = useCallback((ctx: CanvasRenderingContext2D, data: ChartDataPoint[]) => {
+  const drawComparisonSymbols = useCallback((ctx: CanvasRenderingContext2D, data: ChartDataPoint[], minPrice: number, maxPrice: number, priceRange: number, visibleData: ChartDataPoint[]) => {
     if (!config.comparisonSymbols.length) return;
 
     const canvas = ctx.canvas;
@@ -609,28 +609,9 @@ export function ChartContainer() {
     const maxScrollOffset = Math.max(0, data.length - visibleDataCount);
     
     const currentScrollOffset = Math.max(0, Math.min(scrollOffsetRef.current, maxScrollOffset));
-    const visibleData = data.slice(currentScrollOffset, currentScrollOffset + visibleDataCount);
     
     if (visibleData.length === 0) return;
-
-    // Get price range for main symbol
-    const mainPrices = visibleData.map(d => [d.open, d.high, d.low, d.close]).flat();
-    let allPrices = [...mainPrices];
-    
-    // Include comparison symbol prices in the overall price range calculation
-    config.comparisonSymbols.forEach(compSymbol => {
-      if (compSymbol.enabled && compSymbol.data && compSymbol.data.length > 0) {
-        const compVisibleData = compSymbol.data.slice(currentScrollOffset, currentScrollOffset + visibleDataCount);
-        const compPrices = compVisibleData.map(d => d.close);
-        allPrices = allPrices.concat(compPrices);
-      }
-    });
-    
-    const mainMinPrice = Math.min(...allPrices);
-    const mainMaxPrice = Math.max(...allPrices);
-    const mainPriceRange = mainMaxPrice - mainMinPrice;
-
-    if (mainPriceRange === 0) return;
+    if (priceRange === 0) return;
 
     config.comparisonSymbols.forEach(compSymbol => {
       if (!compSymbol.enabled || !compSymbol.data || compSymbol.data.length === 0) return;
@@ -677,7 +658,7 @@ export function ChartContainer() {
           const x = padding + (index * chartWidth) / (visibleData.length - 1);
           
           // Use the main chart's price range to position the comparison symbol
-          const y = padding + chartHeight - ((point.close - mainMinPrice) / mainPriceRange) * chartHeight;
+          const y = padding + ((maxPrice - point.close) / priceRange) * chartHeight;
           
           if (index === 0) {
             ctx.moveTo(x, y);
@@ -720,7 +701,7 @@ export function ChartContainer() {
             const compPriceRange = compMaxPrice - compMinPrice;
             
             // Use the main chart's price range for absolute mode
-            y = padding + chartHeight - ((point.close - mainMinPrice) / mainPriceRange) * chartHeight;
+            y = padding + ((maxPrice - point.close) / priceRange) * chartHeight;
             
             x = padding + (index * chartWidth) / (visibleData.length - 1);
           }
@@ -1139,7 +1120,7 @@ export function ChartContainer() {
     drawDrawingObjects(ctx, data);
 
     // Draw comparison symbols
-    drawComparisonSymbols(ctx, data);
+    drawComparisonSymbols(ctx, data, minPrice, maxPrice, priceRange, visibleData);
 
     // Draw crosshair
     drawCrosshair(ctx, data);
@@ -1414,6 +1395,38 @@ export function ChartContainer() {
       drawChart(canvasRef.current, chartDataRef.current);
     }
   }, [config.showCrosshair, drawChart]);
+
+  // Initialize chart instance for store
+  useEffect(() => {
+    setChartInstance({
+      redraw: () => {
+        if (canvasRef.current && chartDataRef.current.length > 0) {
+          drawChart(canvasRef.current, chartDataRef.current);
+        }
+      },
+      zoomIn: () => {
+        const newZoom = Math.min(5, zoomLevelRef.current * 1.2);
+        zoomLevelRef.current = newZoom;
+        if (canvasRef.current && chartDataRef.current.length > 0) {
+          drawChart(canvasRef.current, chartDataRef.current);
+        }
+      },
+      zoomOut: () => {
+        const newZoom = Math.max(0.1, zoomLevelRef.current * 0.8);
+        zoomLevelRef.current = newZoom;
+        if (canvasRef.current && chartDataRef.current.length > 0) {
+          drawChart(canvasRef.current, chartDataRef.current);
+        }
+      },
+      resetZoom: () => {
+        zoomLevelRef.current = 1;
+        scrollOffsetRef.current = 0;
+        if (canvasRef.current && chartDataRef.current.length > 0) {
+          drawChart(canvasRef.current, chartDataRef.current);
+        }
+      }
+    });
+  }, [drawChart, setChartInstance]);
 
   return (
     <div className="w-full h-full relative">

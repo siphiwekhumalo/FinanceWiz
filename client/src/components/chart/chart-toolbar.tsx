@@ -11,7 +11,7 @@ import { DataSourceToggle } from './data-source-toggle';
 import { ComparisonDropdown } from './comparison-dropdown';
 
 export function ChartToolbar() {
-  const { toggleVolume, toggleCrosshair, resetZoom, config } = useChartStore();
+  const { toggleVolume, toggleCrosshair, resetZoom, zoomIn, zoomOut, config } = useChartStore();
   const { isFullscreen, setFullscreen } = useSettingsStore();
 
   return (
@@ -48,9 +48,9 @@ export function ChartToolbar() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => {/* TODO: Implement zoom in */}}
+          onClick={zoomIn}
           className="px-2 py-1 h-8"
-          title="Zoom In"
+          title="Zoom In (Ctrl/Cmd + Wheel Up)"
         >
           <ZoomIn className="h-4 w-4" />
         </Button>
@@ -58,9 +58,9 @@ export function ChartToolbar() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => {/* TODO: Implement zoom out */}}
+          onClick={zoomOut}
           className="px-2 py-1 h-8"
-          title="Zoom Out"
+          title="Zoom Out (Ctrl/Cmd + Wheel Down)"
         >
           <ZoomOut className="h-4 w-4" />
         </Button>
