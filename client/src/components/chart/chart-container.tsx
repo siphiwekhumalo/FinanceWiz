@@ -1161,6 +1161,48 @@ export function ChartContainer() {
     }
   }, [config.chartType, config.showVolume, drawDrawingObjects, drawCrosshair, drawComparisonSymbols]);
 
+  // Create chart instance with zoom methods
+  useEffect(() => {
+    const chartInstance = {
+      zoomIn: () => {
+        console.log('Chart zoomIn called, current zoom:', zoomLevelRef.current);
+        zoomLevelRef.current = Math.min(zoomLevelRef.current * 1.2, 10);
+        console.log('New zoom level:', zoomLevelRef.current);
+        if (canvasRef.current && chartDataRef.current.length > 0) {
+          drawChart(canvasRef.current, chartDataRef.current);
+        }
+      },
+      zoomOut: () => {
+        console.log('Chart zoomOut called, current zoom:', zoomLevelRef.current);
+        zoomLevelRef.current = Math.max(zoomLevelRef.current * 0.8, 0.1);
+        console.log('New zoom level:', zoomLevelRef.current);
+        if (canvasRef.current && chartDataRef.current.length > 0) {
+          drawChart(canvasRef.current, chartDataRef.current);
+        }
+      },
+      resetZoom: () => {
+        console.log('Chart resetZoom called');
+        zoomLevelRef.current = 1;
+        scrollOffsetRef.current = 0;
+        if (canvasRef.current && chartDataRef.current.length > 0) {
+          drawChart(canvasRef.current, chartDataRef.current);
+        }
+      },
+      getZoomLevel: () => zoomLevelRef.current,
+      redraw: () => {
+        if (canvasRef.current && chartDataRef.current.length > 0) {
+          drawChart(canvasRef.current, chartDataRef.current);
+        }
+      }
+    };
+    
+    setChartInstance(chartInstance);
+    
+    return () => {
+      setChartInstance(null);
+    };
+  }, [setChartInstance, drawChart]);
+
   // Initialize canvas and load data
   useEffect(() => {
     if (!canvasRef.current || !containerRef.current) return;
