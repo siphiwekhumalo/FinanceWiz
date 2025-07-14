@@ -7,7 +7,7 @@ import { ChartDataPoint, DrawingObject } from '@/types/chart-types';
 import { nanoid } from 'nanoid';
 
 export function ChartContainer() {
-  const { isLoading, selectedSymbol, isConnected, config, setChartInstance, addDrawingObject, updateDrawingObject } = useChartStore();
+  const { isLoading, selectedSymbol, isConnected, config, setChartInstance, addDrawingObject, updateDrawingObject, removeDrawingObject } = useChartStore();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const chartDataRef = useRef<ChartDataPoint[]>([]);
@@ -25,11 +25,30 @@ export function ChartContainer() {
   const [showTextInput, setShowTextInput] = useState(false);
   const [textInputValue, setTextInputValue] = useState('');
   const [pendingTextObject, setPendingTextObject] = useState<DrawingObject | null>(null);
+  const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
+  const [isDraggingEndpoint, setIsDraggingEndpoint] = useState(false);
+  const [dragPointIndex, setDragPointIndex] = useState<number>(-1);
   const chartService = ChartService.getInstance();
 
   const getCurrentTime = () => {
     return new Date().toLocaleTimeString();
   };
+
+  // Handle keyboard events for deleting selected objects
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (selectedObjectId) {
+          e.preventDefault();
+          removeDrawingObject(selectedObjectId);
+          setSelectedObjectId(null);
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [selectedObjectId, removeDrawingObject]);
 
   // Convert canvas coordinates to chart data coordinates
   const canvasToChartCoords = useCallback((canvasX: number, canvasY: number, data: ChartDataPoint[]) => {
@@ -86,10 +105,34 @@ export function ChartContainer() {
     };
   }, []);
 
+  // Check if mouse is over an endpoint for editing
+  const getEndpointAtPosition = useCallback((x: number, y: number) => {
+    const ENDPOINT_RADIUS = 8;
+    
+    for (const obj of config.drawingObjects) {
+      if (!obj.completed) continue;
+      
+      for (let i = 0; i < obj.points.length; i++) {
+        const canvasPoint = chartToCanvasCoords(obj.points[i].price, obj.points[i].time, chartDataRef.current);
+        if (!canvasPoint) continue;
+        
+        const distance = Math.sqrt(
+          Math.pow(x - canvasPoint.x, 2) + Math.pow(y - canvasPoint.y, 2)
+        );
+        
+        if (distance <= ENDPOINT_RADIUS) {
+          return { objectId: obj.id, pointIndex: i };
+        }
+      }
+    }
+    
+    return null;
+  }, [config.drawingObjects, chartToCanvasCoords]);
+
   // Handle mouse down for drawing
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
-    if (!canvas || config.selectedTool === 'cursor') return;
+    if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -97,6 +140,40 @@ export function ChartContainer() {
     
     const chartCoords = canvasToChartCoords(x, y, chartDataRef.current);
     if (!chartCoords) return;
+
+    // Check if clicking on an endpoint for editing
+    const endpoint = getEndpointAtPosition(x, y);
+    if (endpoint && config.selectedTool === 'cursor') {
+      setSelectedObjectId(endpoint.objectId);
+      setIsDraggingEndpoint(true);
+      setDragPointIndex(endpoint.pointIndex);
+      e.preventDefault();
+      return;
+    }
+
+    // Handle object selection/deselection with cursor tool
+    if (config.selectedTool === 'cursor') {
+      // Check if clicking on an existing object to select it
+      const clickedObject = config.drawingObjects.find(obj => {
+        if (obj.type === 'text' && obj.points.length > 0) {
+          const canvasPoint = chartToCanvasCoords(obj.points[0].price, obj.points[0].time, chartDataRef.current);
+          if (canvasPoint) {
+            const distance = Math.sqrt(
+              Math.pow(x - canvasPoint.x, 2) + Math.pow(y - canvasPoint.y, 2)
+            );
+            return distance <= 30; // Larger hit area for text
+          }
+        }
+        return false;
+      });
+
+      if (clickedObject) {
+        setSelectedObjectId(clickedObject.id);
+      } else {
+        setSelectedObjectId(null);
+      }
+      return;
+    }
 
     if (config.selectedTool === 'text') {
       // Handle text tool differently - show input dialog
@@ -125,12 +202,11 @@ export function ChartContainer() {
 
     setCurrentDrawingObject(newDrawingObject);
     setIsDrawing(true);
-  }, [config.selectedTool, canvasToChartCoords]);
+    e.preventDefault(); // Prevent scrolling while drawing
+  }, [config.selectedTool, canvasToChartCoords, getEndpointAtPosition]);
 
-  // Handle mouse move for drawing
+  // Handle mouse move for drawing and editing
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing || !currentDrawingObject) return;
-
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -141,29 +217,63 @@ export function ChartContainer() {
     const chartCoords = canvasToChartCoords(x, y, chartDataRef.current);
     if (!chartCoords) return;
 
-    const updatedObject = {
-      ...currentDrawingObject,
-      points: currentDrawingObject.points.length === 1 
-        ? [currentDrawingObject.points[0], chartCoords]
-        : [...currentDrawingObject.points.slice(0, -1), chartCoords]
-    };
+    // Handle endpoint dragging
+    if (isDraggingEndpoint && selectedObjectId) {
+      updateDrawingObject(selectedObjectId, {
+        points: config.drawingObjects
+          .find(obj => obj.id === selectedObjectId)
+          ?.points.map((point, index) => 
+            index === dragPointIndex ? chartCoords : point
+          ) || []
+      });
+      e.preventDefault();
+      return;
+    }
 
-    setCurrentDrawingObject(updatedObject);
-  }, [isDrawing, currentDrawingObject, canvasToChartCoords]);
+    // Handle new drawing
+    if (isDrawing && currentDrawingObject) {
+      const updatedObject = {
+        ...currentDrawingObject,
+        points: currentDrawingObject.points.length === 1 
+          ? [currentDrawingObject.points[0], chartCoords]
+          : [...currentDrawingObject.points.slice(0, -1), chartCoords]
+      };
 
-  // Handle mouse up for drawing
+      setCurrentDrawingObject(updatedObject);
+      e.preventDefault();
+      return;
+    }
+
+    // Update cursor based on hover state
+    if (config.selectedTool === 'cursor') {
+      const endpoint = getEndpointAtPosition(x, y);
+      canvas.style.cursor = endpoint ? 'pointer' : 'default';
+    }
+  }, [isDrawing, currentDrawingObject, isDraggingEndpoint, selectedObjectId, dragPointIndex, canvasToChartCoords, config.drawingObjects, config.selectedTool, updateDrawingObject, getEndpointAtPosition]);
+
+  // Handle mouse up for drawing and editing
   const handleMouseUp = useCallback(() => {
-    if (!isDrawing || !currentDrawingObject) return;
+    // Handle endpoint dragging completion
+    if (isDraggingEndpoint) {
+      setIsDraggingEndpoint(false);
+      // Keep object selected after editing
+      setDragPointIndex(-1);
+      return;
+    }
 
-    const completedObject = {
-      ...currentDrawingObject,
-      completed: true,
-    };
+    // Handle new drawing completion
+    if (isDrawing && currentDrawingObject) {
+      const completedObject = {
+        ...currentDrawingObject,
+        completed: true,
+      };
 
-    addDrawingObject(completedObject);
-    setCurrentDrawingObject(null);
-    setIsDrawing(false);
-  }, [isDrawing, currentDrawingObject, addDrawingObject]);
+      addDrawingObject(completedObject);
+      setCurrentDrawingObject(null);
+      setIsDrawing(false);
+      return;
+    }
+  }, [isDrawing, currentDrawingObject, isDraggingEndpoint, addDrawingObject]);
 
   // Handle text input completion
   const handleTextInputSubmit = useCallback(() => {
@@ -203,28 +313,60 @@ export function ChartContainer() {
     }
 
     allObjects.forEach(obj => {
-      if (obj.points.length < 2) return;
+      if (obj.points.length < 1) return;
 
-      ctx.strokeStyle = obj.color;
+      const isSelected = obj.id === selectedObjectId;
+      ctx.strokeStyle = isSelected ? '#3b82f6' : obj.color;
       ctx.lineWidth = obj.lineWidth;
       ctx.lineCap = 'round';
 
       switch (obj.type) {
         case 'trendline':
-          drawTrendline(ctx, obj, data);
+          if (obj.points.length >= 2) drawTrendline(ctx, obj, data);
           break;
         case 'rectangle':
-          drawRectangle(ctx, obj, data);
+          if (obj.points.length >= 2) drawRectangle(ctx, obj, data);
           break;
         case 'fibonacci':
-          drawFibonacci(ctx, obj, data);
+          if (obj.points.length >= 2) drawFibonacci(ctx, obj, data);
           break;
         case 'text':
-          drawText(ctx, obj, data);
+          if (obj.points.length >= 1) drawText(ctx, obj, data);
           break;
       }
+
+      // Draw endpoints for completed objects when cursor tool is active
+      if (obj.completed && config.selectedTool === 'cursor') {
+        drawEndpoints(ctx, obj, data, isSelected);
+      }
     });
-  }, [config.drawingObjects, currentDrawingObject]);
+  }, [config.drawingObjects, currentDrawingObject, selectedObjectId, config.selectedTool]);
+
+  // Draw draggable endpoints
+  const drawEndpoints = useCallback((ctx: CanvasRenderingContext2D, obj: DrawingObject, data: ChartDataPoint[], isSelected: boolean) => {
+    const ENDPOINT_RADIUS = 6;
+    
+    obj.points.forEach(point => {
+      const canvasPoint = chartToCanvasCoords(point.price, point.time, data);
+      if (!canvasPoint) return;
+
+      // Draw endpoint circle
+      ctx.fillStyle = isSelected ? '#3b82f6' : obj.color;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      
+      ctx.beginPath();
+      ctx.arc(canvasPoint.x, canvasPoint.y, ENDPOINT_RADIUS, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.stroke();
+
+      // Add a smaller inner circle for better visibility
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(canvasPoint.x, canvasPoint.y, ENDPOINT_RADIUS - 3, 0, 2 * Math.PI);
+      ctx.fill();
+    });
+  }, [chartToCanvasCoords]);
 
   // Draw trendline
   const drawTrendline = useCallback((ctx: CanvasRenderingContext2D, obj: DrawingObject, data: ChartDataPoint[]) => {
@@ -906,6 +1048,14 @@ export function ChartContainer() {
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
+          onWheel={(e) => {
+            // Prevent scrolling when drawing or editing
+            if (isDrawing || isDraggingEndpoint || config.selectedTool !== 'cursor') {
+              e.preventDefault();
+              return;
+            }
+            // Allow normal scrolling for cursor tool
+          }}
         />
         
         {isLoading && (
