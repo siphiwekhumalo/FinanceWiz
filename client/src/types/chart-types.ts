@@ -73,7 +73,7 @@ export interface WhiteLabelConfig {
   };
 }
 
-export type ChartType = 'candlestick' | 'line' | 'area';
+export type ChartType = 'candlestick' | 'line' | 'area' | 'bar' | 'doughnut' | 'pie' | 'radar' | 'polarArea' | 'scatter';
 export type Timeframe = '1m' | '5m' | '15m' | '1h' | '4h' | '1d' | '1w' | '1y';
 export type DataSource = 'dummy' | 'real';
 export type ComparisonMode = 'absolute' | 'percentage';

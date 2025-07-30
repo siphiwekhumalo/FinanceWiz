@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useChartStore } from '@/store/chart-store';
 import { useSettingsStore } from '@/store/settings-store';
 import { AppHeader } from '@/components/header/app-header';
-import { ChartContainer } from '@/components/chart/chart-container';
+import { EnhancedChartContainer } from '@/components/chart/enhanced-chart-container';
 import { ChartToolbar } from '@/components/chart/chart-toolbar';
 import { ChartZoomControls } from '@/components/chart/chart-zoom-controls';
 import { VolumeChart } from '@/components/chart/volume-chart';
@@ -30,7 +30,7 @@ export default function ChartDashboard() {
         <ChartToolbar />
         
         <div className="flex-1 bg-slate-900 relative border-b border-slate-700">
-          <ChartContainer />
+          <EnhancedChartContainer />
           <ChartZoomControls />
         </div>
         
@@ -53,7 +53,7 @@ export default function ChartDashboard() {
           <ChartToolbar />
           
           <div className="flex-1 bg-slate-900 relative border-b border-slate-700">
-            <ChartContainer />
+            <EnhancedChartContainer />
             <ChartZoomControls />
           </div>
           

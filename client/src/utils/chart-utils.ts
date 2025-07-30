@@ -72,6 +72,17 @@ export class ChartUtils {
     );
   }
 
+  static normalize(values: number[]): number[] {
+    if (!values.length) return [];
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const range = max - min;
+    
+    if (range === 0) return values.map(() => 0.5); // All values are the same
+    
+    return values.map(value => (value - min) / range);
+  }
+
   static generateTimeLabels(startTime: number, timeframe: string, count: number): string[] {
     const labels: string[] = [];
     const intervalMs = this.getTimeframeMs(timeframe);
