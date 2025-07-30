@@ -3,9 +3,11 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { insertSymbolSchema, insertChartDataSchema, insertIndicatorSchema, insertWhiteLabelConfigSchema } from "@shared/schema";
+import { DataManager } from "./data-adapters/data-manager";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
+  const dataManager = new DataManager();
 
   // WebSocket server for real-time data
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
@@ -264,6 +266,201 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       res.status(400).json({ message: 'Invalid white label data' });
     }
+  });
+
+  // Data adapter management routes
+  app.get('/api/data-adapters', (req, res) => {
+    const adapters = dataManager.getAvailableAdapters();
+    res.json(adapters);
+  });
+
+  app.post('/api/data-adapters', async (req, res) => {
+    try {
+      const { name, type, config, priority } = req.body;
+      await dataManager.addAdapter(name, { type, config, priority });
+      res.json({ success: true, message: `Added adapter: ${name}` });
+    } catch (error) {
+      res.status(400).json({ success: false, message: `Failed to add adapter: ${error}` });
+    }
+  });
+
+  app.delete('/api/data-adapters/:name', async (req, res) => {
+    try {
+      await dataManager.removeAdapter(req.params.name);
+      res.json({ success: true, message: `Removed adapter: ${req.params.name}` });
+    } catch (error) {
+      res.status(400).json({ success: false, message: `Failed to remove adapter: ${error}` });
+    }
+  });
+
+  // Enhanced chart data with multiple sources
+  app.get('/api/chart-data-enhanced/:symbol', async (req, res) => {
+    try {
+      const symbol = req.params.symbol;
+      const timeframe = req.query.timeframe as string || '1h';
+      const startDate = req.query.start ? new Date(req.query.start as string) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const endDate = req.query.end ? new Date(req.query.end as string) : new Date();
+      const preferredSource = req.query.source as string;
+
+      const data = await dataManager.getHistoricalData({
+        symbol,
+        timeframe,
+        start: startDate,
+        end: endDate,
+        preferredSource
+      });
+
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch enhanced chart data' });
+    }
+  });
+
+  // Realtime quotes
+  app.get('/api/quote/:symbol', async (req, res) => {
+    try {
+      const symbol = req.params.symbol;
+      const preferredSource = req.query.source as string;
+      
+      const quote = await dataManager.getRealtimeQuote(symbol, preferredSource);
+      if (!quote) {
+        return res.status(404).json({ message: 'Quote not found' });
+      }
+      
+      res.json(quote);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch quote' });
+    }
+  });
+
+  // Corporate actions
+  app.get('/api/corporate-actions/:symbol', async (req, res) => {
+    try {
+      const symbol = req.params.symbol;
+      const startDate = req.query.start ? new Date(req.query.start as string) : new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+      const endDate = req.query.end ? new Date(req.query.end as string) : new Date();
+
+      const actions = await dataManager.getCorporateActions(symbol, startDate, endDate);
+      res.json(actions);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch corporate actions' });
+    }
+  });
+
+  // News events
+  app.get('/api/news/:symbol', async (req, res) => {
+    try {
+      const symbol = req.params.symbol;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+
+      const news = await dataManager.getNews(symbol, limit);
+      res.json(news);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch news' });
+    }
+  });
+
+  // Symbol validation
+  app.get('/api/validate-symbol/:symbol', async (req, res) => {
+    try {
+      const symbol = req.params.symbol;
+      const validation = await dataManager.validateSymbol(symbol);
+      res.json(validation);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to validate symbol' });
+    }
+  });
+
+  // WebSocket enhancements for real-time data
+  wss.on('connection', (ws) => {
+    console.log('WebSocket client connected');
+    
+    ws.on('message', async (message) => {
+      try {
+        const data = JSON.parse(message.toString());
+        
+        switch (data.type) {
+          case 'subscribe_quotes':
+            await dataManager.subscribe(data.symbol, 'quotes', (quote) => {
+              if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                  type: 'quote_update',
+                  symbol: data.symbol,
+                  data: quote
+                }));
+              }
+            });
+            ws.send(JSON.stringify({ 
+              type: 'subscribed', 
+              symbol: data.symbol,
+              dataType: 'quotes',
+              status: 'success'
+            }));
+            break;
+            
+          case 'subscribe_trades':
+            await dataManager.subscribe(data.symbol, 'trades', (trade) => {
+              if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                  type: 'trade_update',
+                  symbol: data.symbol,
+                  data: trade
+                }));
+              }
+            });
+            ws.send(JSON.stringify({ 
+              type: 'subscribed', 
+              symbol: data.symbol,
+              dataType: 'trades',
+              status: 'success'
+            }));
+            break;
+            
+          case 'subscribe_news':
+            await dataManager.subscribe(data.symbol, 'news', (news) => {
+              if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                  type: 'news_update',
+                  symbol: data.symbol,
+                  data: news
+                }));
+              }
+            });
+            ws.send(JSON.stringify({ 
+              type: 'subscribed', 
+              symbol: data.symbol,
+              dataType: 'news',
+              status: 'success'
+            }));
+            break;
+            
+          case 'unsubscribe':
+            await dataManager.unsubscribe(data.symbol, data.dataType);
+            ws.send(JSON.stringify({ 
+              type: 'unsubscribed', 
+              symbol: data.symbol,
+              dataType: data.dataType,
+              status: 'success'
+            }));
+            break;
+            
+          default:
+            ws.send(JSON.stringify({ 
+              type: 'error', 
+              message: 'Unknown message type'
+            }));
+        }
+      } catch (error) {
+        ws.send(JSON.stringify({ 
+          type: 'error', 
+          message: 'Invalid message format'
+        }));
+      }
+    });
+    
+    ws.on('close', () => {
+      console.log('WebSocket client disconnected');
+    });
   });
 
   return httpServer;
