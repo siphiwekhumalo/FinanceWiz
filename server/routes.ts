@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { insertSymbolSchema, insertChartDataSchema, insertIndicatorSchema, insertWhiteLabelSchema } from "@shared/schema";
+import { insertSymbolSchema, insertChartDataSchema, insertIndicatorSchema, insertWhiteLabelConfigSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -223,7 +223,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/white-label/:id', async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const whiteLabel = await storage.getWhiteLabel(id);
+      const whiteLabel = await storage.getWhiteLabelConfig(id);
       if (!whiteLabel) {
         return res.status(404).json({ message: 'White label configuration not found' });
       }
@@ -233,10 +233,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/white-label', async (req, res) => {
+    try {
+      const whiteLabel = await storage.getActiveWhiteLabelConfig();
+      res.json(whiteLabel);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to fetch white label configuration' });
+    }
+  });
+
   app.post('/api/white-label', async (req, res) => {
     try {
-      const validatedData = insertWhiteLabelSchema.parse(req.body);
-      const whiteLabel = await storage.createWhiteLabel(validatedData);
+      const validatedData = insertWhiteLabelConfigSchema.parse(req.body);
+      const whiteLabel = await storage.createWhiteLabelConfig(validatedData);
       res.json(whiteLabel);
     } catch (error) {
       res.status(400).json({ message: 'Invalid white label data' });
@@ -246,37 +255,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/white-label/:id', async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const validatedData = insertWhiteLabelSchema.partial().parse(req.body);
-      const whiteLabel = await storage.updateWhiteLabel(id, validatedData);
+      const validatedData = insertWhiteLabelConfigSchema.partial().parse(req.body);
+      const whiteLabel = await storage.updateWhiteLabelConfig(id, validatedData);
       if (!whiteLabel) {
         return res.status(404).json({ message: 'White label configuration not found' });
       }
       res.json(whiteLabel);
     } catch (error) {
       res.status(400).json({ message: 'Invalid white label data' });
-    }
-  });
-
-  // Trade routes
-  app.get('/api/trades/:symbolId', async (req, res) => {
-    try {
-      const symbolId = parseInt(req.params.symbolId);
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
-      const trades = await storage.getRecentTrades(symbolId, limit);
-      res.json(trades);
-    } catch (error) {
-      res.status(500).json({ message: 'Failed to fetch trades' });
-    }
-  });
-
-  // Order book routes
-  app.get('/api/order-book/:symbolId', async (req, res) => {
-    try {
-      const symbolId = parseInt(req.params.symbolId);
-      const orderBook = await storage.getOrderBook(symbolId);
-      res.json(orderBook);
-    } catch (error) {
-      res.status(500).json({ message: 'Failed to fetch order book' });
     }
   });
 

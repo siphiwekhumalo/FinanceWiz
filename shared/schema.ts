@@ -1,145 +1,167 @@
-import { pgTable, text, serial, integer, boolean, timestamp, decimal, jsonb } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod";
+import { pgTable, serial, text, decimal, timestamp, boolean, integer, jsonb } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
+import { z } from 'zod';
 
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+// Symbols table
+export const symbols = pgTable('symbols', {
+  id: serial('id').primaryKey(),
+  symbol: text('symbol').notNull().unique(),
+  name: text('name').notNull(),
+  exchange: text('exchange').notNull(),
+  sector: text('sector'),
+  marketCap: decimal('market_cap', { precision: 15, scale: 2 }),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 });
 
-export const symbols = pgTable("symbols", {
-  id: serial("id").primaryKey(),
-  symbol: text("symbol").notNull().unique(),
-  name: text("name").notNull(),
-  exchange: text("exchange"),
-  sector: text("sector"),
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
+// Chart data table for OHLCV data
+export const chartData = pgTable('chart_data', {
+  id: serial('id').primaryKey(),
+  symbolId: integer('symbol_id').references(() => symbols.id),
+  timeframe: text('timeframe').notNull(), // '1m', '5m', '15m', '1h', '4h', '1d', '1w', '1y'
+  timestamp: timestamp('timestamp').notNull(),
+  open: decimal('open', { precision: 10, scale: 4 }).notNull(),
+  high: decimal('high', { precision: 10, scale: 4 }).notNull(),
+  low: decimal('low', { precision: 10, scale: 4 }).notNull(),
+  close: decimal('close', { precision: 10, scale: 4 }).notNull(),
+  volume: decimal('volume', { precision: 15, scale: 2 }).notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
 });
 
-export const chartData = pgTable("chart_data", {
-  id: serial("id").primaryKey(),
-  symbolId: integer("symbol_id").references(() => symbols.id).notNull(),
-  timeframe: text("timeframe").notNull(), // 1m, 5m, 1h, 1d, 1w
-  timestamp: timestamp("timestamp").notNull(),
-  open: decimal("open", { precision: 12, scale: 4 }).notNull(),
-  high: decimal("high", { precision: 12, scale: 4 }).notNull(),
-  low: decimal("low", { precision: 12, scale: 4 }).notNull(),
-  close: decimal("close", { precision: 12, scale: 4 }).notNull(),
-  volume: decimal("volume", { precision: 15, scale: 2 }).notNull(),
+// Technical indicators table
+export const indicators = pgTable('indicators', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  type: text('type').notNull(), // 'sma', 'ema', 'rsi', 'macd', 'bollinger', etc.
+  parameters: jsonb('parameters').notNull(), // Flexible parameters like period, deviation, etc.
+  color: text('color').notNull().default('#22c55e'),
+  isEnabled: boolean('is_enabled').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
 });
 
-export const indicators = pgTable("indicators", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  type: text("type").notNull(), // MA, RSI, MACD, etc.
-  parameters: jsonb("parameters"),
-  isActive: boolean("is_active").default(true),
+// User watchlists
+export const watchlists = pgTable('watchlists', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  userId: text('user_id').notNull(), // For future user management
+  symbolIds: jsonb('symbol_ids').notNull(), // Array of symbol IDs
+  isDefault: boolean('is_default').default(false),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 });
 
-export const whiteLabels = pgTable("white_labels", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  logo: text("logo"),
-  primaryColor: text("primary_color").default("#3B82F6"),
-  secondaryColor: text("secondary_color").default("#1E293B"),
-  theme: text("theme").default("dark"),
-  customCss: text("custom_css"),
-  features: jsonb("features"),
-  createdAt: timestamp("created_at").defaultNow(),
+// White label configurations
+export const whiteLabelConfigs = pgTable('white_label_configs', {
+  id: serial('id').primaryKey(),
+  companyName: text('company_name').notNull(),
+  tagline: text('tagline'),
+  logo: text('logo'), // URL or base64 encoded logo
+  primaryColor: text('primary_color').notNull().default('#22c55e'),
+  secondaryColor: text('secondary_color').notNull().default('#ef4444'),
+  theme: text('theme').notNull().default('dark'), // 'light' | 'dark'
+  features: jsonb('features').notNull(), // Feature toggles
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 });
 
-export const trades = pgTable("trades", {
-  id: serial("id").primaryKey(),
-  symbolId: integer("symbol_id").references(() => symbols.id).notNull(),
-  price: decimal("price", { precision: 12, scale: 4 }).notNull(),
-  size: decimal("size", { precision: 15, scale: 2 }).notNull(),
-  side: text("side").notNull(), // buy, sell
-  timestamp: timestamp("timestamp").defaultNow(),
+// Drawing objects for charts
+export const drawingObjects = pgTable('drawing_objects', {
+  id: serial('id').primaryKey(),
+  symbolId: integer('symbol_id').references(() => symbols.id),
+  userId: text('user_id').notNull(),
+  type: text('type').notNull(), // 'trendline', 'fibonacci', 'rectangle', 'text'
+  points: jsonb('points').notNull(), // Array of coordinate points
+  style: jsonb('style').notNull(), // Color, line width, etc.
+  isVisible: boolean('is_visible').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 });
 
-export const orderBook = pgTable("order_book", {
-  id: serial("id").primaryKey(),
-  symbolId: integer("symbol_id").references(() => symbols.id).notNull(),
-  price: decimal("price", { precision: 12, scale: 4 }).notNull(),
-  size: decimal("size", { precision: 15, scale: 2 }).notNull(),
-  side: text("side").notNull(), // buy, sell
-  timestamp: timestamp("timestamp").defaultNow(),
+// Define relations
+export const symbolsRelations = relations(symbols, ({ many }) => ({
+  chartData: many(chartData),
+  drawingObjects: many(drawingObjects),
+}));
+
+export const chartDataRelations = relations(chartData, ({ one }) => ({
+  symbol: one(symbols, {
+    fields: [chartData.symbolId],
+    references: [symbols.id],
+  }),
+}));
+
+export const drawingObjectsRelations = relations(drawingObjects, ({ one }) => ({
+  symbol: one(symbols, {
+    fields: [drawingObjects.symbolId],
+    references: [symbols.id],
+  }),
+}));
+
+// Zod schemas for validation
+export const insertSymbolSchema = createInsertSchema(symbols).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
-// Insert schemas
-export const insertSymbolSchema = createInsertSchema(symbols).pick({
-  symbol: true,
-  name: true,
-  exchange: true,
-  sector: true,
+export const selectSymbolSchema = createSelectSchema(symbols);
+
+export const insertChartDataSchema = createInsertSchema(chartData).omit({
+  id: true,
+  createdAt: true,
 });
 
-export const insertChartDataSchema = createInsertSchema(chartData).pick({
-  symbolId: true,
-  timeframe: true,
-  timestamp: true,
-  open: true,
-  high: true,
-  low: true,
-  close: true,
-  volume: true,
+export const selectChartDataSchema = createSelectSchema(chartData);
+
+export const insertIndicatorSchema = createInsertSchema(indicators).omit({
+  id: true,
+  createdAt: true,
 });
 
-export const insertIndicatorSchema = createInsertSchema(indicators).pick({
-  name: true,
-  type: true,
-  parameters: true,
+export const selectIndicatorSchema = createSelectSchema(indicators);
+
+export const insertWatchlistSchema = createInsertSchema(watchlists).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
-export const insertWhiteLabelSchema = createInsertSchema(whiteLabels).pick({
-  name: true,
-  logo: true,
-  primaryColor: true,
-  secondaryColor: true,
-  theme: true,
-  customCss: true,
-  features: true,
+export const selectWatchlistSchema = createSelectSchema(watchlists);
+
+export const insertWhiteLabelConfigSchema = createInsertSchema(whiteLabelConfigs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
-export const insertTradeSchema = createInsertSchema(trades).pick({
-  symbolId: true,
-  price: true,
-  size: true,
-  side: true,
+export const selectWhiteLabelConfigSchema = createSelectSchema(whiteLabelConfigs);
+
+export const insertDrawingObjectSchema = createInsertSchema(drawingObjects).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
-export const insertOrderBookSchema = createInsertSchema(orderBook).pick({
-  symbolId: true,
-  price: true,
-  size: true,
-  side: true,
-});
+export const selectDrawingObjectSchema = createSelectSchema(drawingObjects);
 
-// Types
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
-
-export type InsertSymbol = z.infer<typeof insertSymbolSchema>;
+// Type exports
 export type Symbol = typeof symbols.$inferSelect;
+export type InsertSymbol = z.infer<typeof insertSymbolSchema>;
 
-export type InsertChartData = z.infer<typeof insertChartDataSchema>;
 export type ChartData = typeof chartData.$inferSelect;
+export type InsertChartData = z.infer<typeof insertChartDataSchema>;
 
-export type InsertIndicator = z.infer<typeof insertIndicatorSchema>;
 export type Indicator = typeof indicators.$inferSelect;
+export type InsertIndicator = z.infer<typeof insertIndicatorSchema>;
 
-export type InsertWhiteLabel = z.infer<typeof insertWhiteLabelSchema>;
-export type WhiteLabel = typeof whiteLabels.$inferSelect;
+export type Watchlist = typeof watchlists.$inferSelect;
+export type InsertWatchlist = z.infer<typeof insertWatchlistSchema>;
 
-export type InsertTrade = z.infer<typeof insertTradeSchema>;
-export type Trade = typeof trades.$inferSelect;
+export type WhiteLabelConfig = typeof whiteLabelConfigs.$inferSelect;
+export type InsertWhiteLabelConfig = z.infer<typeof insertWhiteLabelConfigSchema>;
 
-export type InsertOrderBook = z.infer<typeof insertOrderBookSchema>;
-export type OrderBook = typeof orderBook.$inferSelect;
-
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-});
+export type DrawingObject = typeof drawingObjects.$inferSelect;
+export type InsertDrawingObject = z.infer<typeof insertDrawingObjectSchema>;
